@@ -94,21 +94,6 @@ return {
     end,
   },
 
-  -- Hide LSP diagnostics on markdown buffers (marksman & friends still attach
-  -- for go-to / completion / hover, but no inline error/warn squiggles).
-  -- Also overrides LazyVim's default `vim.opt_local.spell = true` on markdown,
-  -- which was the main source of red wavy lines under every non-dictionary word.
-  {
-    "neovim/nvim-lspconfig",
-    init = function()
-      vim.api.nvim_create_autocmd("FileType", {
-        pattern = "markdown",
-        group = vim.api.nvim_create_augroup("UserMarkdownQuiet", { clear = true }),
-        callback = function(args)
-          vim.diagnostic.enable(false, { bufnr = args.buf })
-          vim.opt_local.spell = false   -- override LazyVim's wrap_spell autocmd
-        end,
-      })
-    end,
-  },
+  -- (markdown spell + diagnostic muting moved to lua/config/autocmds.lua so it
+  --  reliably runs after LazyVim's defaults — see that file.)
 }
