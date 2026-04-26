@@ -60,7 +60,7 @@ return {
     },
   },
 
-  -- camelCase-aware spell check.
+  -- camelCase-aware spell check (disabled on markdown / wiki — too noisy on prose).
   {
     "davidmh/cspell.nvim",
     dependencies = { "nvimtools/none-ls.nvim", "nvim-lua/plenary.nvim" },
@@ -70,9 +70,40 @@ return {
       local cspell = require("cspell")
       null_ls.setup({
         sources = {
-          cspell.diagnostics.with({ diagnostics_postprocess = function(d) d.severity = vim.diagnostic.severity.HINT end }),
+          cspell.diagnostics.with({
+            runtime_condition = function(params)
+              -- Skip cspell entirely on markdown buffers.
+              return params.ft ~= "markdown"
+            end,
+            diagnostics_postprocess = function(d) d.severity = vim.diagnostic.severity.HINT end,
+          }),
           cspell.code_actions,
         },
+      })
+    end,
+  },
+
+  -- Silence markdown linters & LSP diagnostics on markdown / wiki files.
+  -- Keeps marksman LSP attached for navigation/completion, just hides its diagnostics.
+  {
+    "mfussenegger/nvim-lint",
+    opts = function(_, opts)
+      opts.linters_by_ft = opts.linters_by_ft or {}
+      opts.linters_by_ft.markdown = {} -- empty list = no markdownlint / vale / etc.
+      return opts
+    end,
+  },
+
+  -- Hide LSP diagnostics on markdown buffers (marksman & friends still attach
+  -- for go-to / completion / hover, but no inline error/warn squiggles).
+  {
+    "neovim/nvim-lspconfig",
+    init = function()
+      vim.api.nvim_create_autocmd("FileType", {
+        pattern = "markdown",
+        callback = function(args)
+          vim.diagnostic.enable(false, { bufnr = args.buf })
+        end,
       })
     end,
   },
