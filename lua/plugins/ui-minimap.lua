@@ -5,7 +5,9 @@ return {
     enabled = true,
     lazy = false,
     keys = {
-      { "<leader>um", "<cmd>Neominimap toggle<cr>", desc = "Toggle Minimap (global)" },
+      { "<leader>um", "<cmd>Neominimap toggle<cr>",     desc = "Minimap: toggle (global)" },
+      { "<leader>uM", "<cmd>Neominimap bufToggle<cr>",  desc = "Minimap: toggle (this buffer only)" },
+      { "<leader>uw", "<cmd>Neominimap winToggle<cr>",  desc = "Minimap: toggle (this window only)" },
     },
     init = function()
       vim.opt.wrap = false
