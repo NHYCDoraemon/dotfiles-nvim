@@ -39,15 +39,16 @@ return {
       left = {
         { title = "Explorer",  ft = "snacks_layout_box" },
         { ft = "snacks_picker_list", title = "Picker", size = { height = 0.3 } },
-        { ft = "Outline",      title = "Structure",   pinned = true, open = "Outline", size = { height = 0.5 } },
         { ft = "dapui_scopes",      title = "Scopes",      size = { height = 0.25 } },
         { ft = "dapui_breakpoints", title = "Breakpoints", size = { height = 0.25 } },
         { ft = "dapui_stacks",      title = "Call Stack",  size = { height = 0.25 } },
         { ft = "dapui_watches",     title = "Watches",     size = { height = 0.25 } },
       },
       right = {
-        { title = "Avante", ft = "Avante",      size = { width = 0.35 } },
-        { title = "Help",   ft = "help",        size = { width = 80 } },
+        -- Structure (Outline) docks here, IDEA-style on the right.
+        { title = "Structure", ft = "Outline", pinned = true, open = "Outline", size = { width = 40 } },
+        { title = "Avante",    ft = "Avante",  size = { width = 0.35 } },
+        { title = "Help",      ft = "help",    size = { width = 80 } },
       },
       options = {
         left   = { size = 40 },
