@@ -1,20 +1,44 @@
 return {
   -- Override LazyVim's `gr` LSP keymap to use Snacks picker (floating, no quickfix).
-  -- LazyVim.lsp.on_attach() is the framework-supported hook that runs AFTER LazyVim's
-  -- own LSP keymap setup, so our buffer-local `gr` cleanly overrides it. Earlier
-  -- attempts via `keys` mutation and a plain LspAttach autocmd lost the ordering race.
+  -- We use plain nvim autocmds (no LazyVim helper — `LazyVim.lsp.on_attach` is
+  -- deprecated and crashes during init because its deprecation notifier needs Snacks).
+  -- vim.schedule defers our keymap.set to AFTER LazyVim's LSP keymap setup runs,
+  -- so the buffer-local override cleanly wins. BufEnter re-applies as a safety net.
   {
     "neovim/nvim-lspconfig",
     init = function()
-      LazyVim.lsp.on_attach(function(_, buffer)
+      local function set_picker_gr(bufnr)
+        if not vim.api.nvim_buf_is_valid(bufnr) then return end
         vim.keymap.set("n", "gr", function()
           if _G.Snacks and _G.Snacks.picker and _G.Snacks.picker.lsp_references then
             _G.Snacks.picker.lsp_references()
           else
             vim.lsp.buf.references()
           end
-        end, { buffer = buffer, desc = "References (picker, no quickfix)", silent = true })
-      end)
+        end, { buffer = bufnr, desc = "References (picker, no quickfix)", silent = true })
+      end
+
+      local grp = vim.api.nvim_create_augroup("UserGrPickerOverride", { clear = true })
+
+      vim.api.nvim_create_autocmd("LspAttach", {
+        group = grp,
+        callback = function(args)
+          vim.schedule(function() set_picker_gr(args.buf) end)
+        end,
+      })
+
+      vim.api.nvim_create_autocmd("BufEnter", {
+        group = grp,
+        callback = function(args)
+          vim.schedule(function()
+            if vim.api.nvim_buf_is_valid(args.buf)
+              and #vim.lsp.get_clients({ bufnr = args.buf }) > 0
+            then
+              set_picker_gr(args.buf)
+            end
+          end)
+        end,
+      })
     end,
   },
 
