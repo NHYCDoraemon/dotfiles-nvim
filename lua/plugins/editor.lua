@@ -63,19 +63,51 @@ return {
     },
   },
 
-  -- Zen / focus mode.
+  -- Zen / focus mode — distraction-free editing (hides chrome, dims surrounding).
   {
     "folke/zen-mode.nvim",
-    cmd = "ZenMode",
+    dependencies = { "folke/twilight.nvim" },
+    cmd = { "ZenMode", "Twilight" },
     keys = {
-      { "<leader>uz", "<cmd>ZenMode<cr>", desc = "Toggle Zen Mode" },
+      { "<leader>z",  "<cmd>ZenMode<cr>", desc = "Zen Mode" },
+      { "<leader>uz", "<cmd>ZenMode<cr>", desc = "Zen Mode (alt)" },
     },
     opts = {
-      window = { backdrop = 0.95, width = 0.85 },
+      window = {
+        backdrop = 0.92,        -- 0 = no dim, 1 = full black
+        width = 0.7,
+        height = 0.95,
+        options = {
+          signcolumn = "no",
+          number = false,
+          relativenumber = false,
+          cursorline = false,
+          cursorcolumn = false,
+          foldcolumn = "0",
+          list = false,
+        },
+      },
       plugins = {
-        gitsigns = { enabled = true },
+        options = { enabled = true, ruler = false, showcmd = false, laststatus = 0 },
+        twilight = { enabled = true },     -- auto-dim non-focused code
+        gitsigns = { enabled = false },
         tmux = { enabled = false },
       },
+      on_open = function() vim.cmd("Twilight") end,
+      on_close = function() vim.cmd("TwilightDisable") end,
+    },
+  },
+
+  -- Twilight: dims inactive code (paragraphs/scopes) while editing.
+  -- Bundled with zen-mode but useful standalone too.
+  {
+    "folke/twilight.nvim",
+    cmd = { "Twilight", "TwilightEnable", "TwilightDisable" },
+    opts = {
+      dimming = { alpha = 0.3 },
+      context = 10,
+      treesitter = true,
+      expand = { "function", "method", "table", "if_statement", "for_statement" },
     },
   },
 

@@ -116,7 +116,15 @@ map("n", "<A-F7>",  function() Snacks.picker.lsp_references() end, { desc = "Fin
 map("n", "<F2>",    "]d",                                          { desc = "Next error" })
 map("n", "<S-F2>",  "[d",                                          { desc = "Previous error" })
 
--- (`gr` is now handled by the editor.snacks_picker LazyVim extra → Snacks.picker.lsp_references.)
+-- Global LSP picker fallbacks for `gr` / `gI` / `gd` / `gy`.
+-- The editor.snacks_picker extra installs these as BUFFER-LOCAL maps on LspAttach.
+-- Before LSP attaches (e.g. immediately after opening a fresh file), pressing `gr`
+-- falls through to vim's native `gr` (virtual-replace) and `gI` (insert at BOL).
+-- Setting them globally guarantees the picker fires every time, regardless of
+-- attach timing. Buffer-local maps from the extra still take precedence when set.
+map("n", "gr", function() Snacks.picker.lsp_references() end,       { desc = "References (picker, global fallback)" })
+map("n", "gI", function() Snacks.picker.lsp_implementations() end,  { desc = "Implementations (picker, global fallback)" })
+map("n", "gy", function() Snacks.picker.lsp_type_definitions() end, { desc = "Type definitions (picker, global fallback)" })
 
 -- ============================================================
 -- (4) REFACTOR

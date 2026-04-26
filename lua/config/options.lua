@@ -59,5 +59,8 @@ end
 opt.clipboard = "unnamedplus"
 
 -- Faster which-key.
+-- Key-sequence timeout. 300ms (LazyVim default) is too aggressive for multi-key
+-- IDEA-style chords like <Space>oo / <Space>cs / gI — typing slightly slower
+-- caused the second key to be processed standalone. 600ms is a safer middle.
 opt.timeout = true
-opt.timeoutlen = 300
+opt.timeoutlen = 600
