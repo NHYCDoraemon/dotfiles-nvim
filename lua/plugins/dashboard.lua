@@ -1,18 +1,17 @@
 -- Custom snacks.dashboard.
--- Header uses an explicit string-per-line table so trailing spaces in the C glyph
--- (rows 3 and 4 of NHYC) survive editor / formatter passes.
+--
+-- Single-column centered layout. Sections separated by thin rules. NHYC ASCII art
+-- header (rows 3-4 use explicit per-line strings so trailing spaces in the C glyph
+-- survive editor / formatter passes).
 return {
   {
     "folke/snacks.nvim",
     opts = {
       dashboard = {
-        width = 60,
-        row = nil,
-        col = nil,
-        pane_gap = 4,
-        autokeys = "1234567890abcdefghilmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ",
+        width = 56,
         preset = {
           header = table.concat({
+            "",
             "███╗   ██╗██╗  ██╗██╗   ██╗ ██████╗",
             "████╗  ██║██║  ██║╚██╗ ██╔╝██╔════╝",
             "██╔██╗ ██║███████║ ╚████╔╝ ██║     ",
@@ -20,7 +19,8 @@ return {
             "██║ ╚████║██║  ██║   ██║   ╚██████╗",
             "╚═╝  ╚═══╝╚═╝  ╚═╝   ╚═╝    ╚═════╝",
             "",
-            "           H A P P Y    C O D I N G",
+            "      H A P P Y   C O D I N G",
+            "",
           }, "\n"),
           keys = {
             { icon = " ", key = "f", desc = "Find File",       action = ":lua Snacks.dashboard.pick('files')" },
@@ -36,23 +36,17 @@ return {
           },
         },
         sections = {
-          { section = "header" },
-          { pane = 2, icon = " ", title = "Keymaps", section = "keys", indent = 2, padding = 1 },
-          { pane = 2, icon = " ", title = "Recent Files", section = "recent_files", indent = 2, padding = 1 },
-          { pane = 2, icon = " ", title = "Projects", section = "projects", indent = 2, padding = 1 },
-          {
-            pane = 2,
-            icon = " ",
-            title = "Git Status",
-            section = "terminal",
-            enabled = function() return Snacks.git.get_root() ~= nil end,
-            cmd = "git --no-pager diff --stat -B -M -C",
-            height = 10,
-            padding = 1,
-            ttl = 5 * 60,
-            indent = 3,
-          },
-          { section = "startup" },
+          { section = "header", padding = 1 },
+          { text = { { "──────────────────────────────────────────", hl = "SnacksDashboardDir" } }, align = "center", padding = 1 },
+          { section = "keys", gap = 1, padding = 1 },
+          { text = { { "──────────────────────────────────────────", hl = "SnacksDashboardDir" } }, align = "center", padding = 1 },
+          { pane = 1, section = "recent_files", title = "Recent Files", icon = " ", limit = 5, padding = 1, indent = 2 },
+          { section = "startup", align = "center" },
+        },
+        formats = {
+          key = function(item)
+            return { { "[", hl = "SnacksDashboardDesc" }, { item.key, hl = "SnacksDashboardKey" }, { "]", hl = "SnacksDashboardDesc" } }
+          end,
         },
       },
     },
