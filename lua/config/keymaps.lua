@@ -112,9 +112,13 @@ map("n", "<D-u>",   vim.lsp.buf.type_definition,                  { desc = "Go t
 map("n", "<D-[>",   "<C-o>",                                      { desc = "Navigate Back" })
 map("n", "<D-]>",   "<C-i>",                                      { desc = "Navigate Forward" })
 map("n", "<D-F12>", "<cmd>Outline<CR>",                           { desc = "File Structure" })
-map("n", "<A-F7>",  vim.lsp.buf.references,                       { desc = "Find Usages" })
+map("n", "<A-F7>",  function() Snacks.picker.lsp_references() end, { desc = "Find Usages (picker)" })
 map("n", "<F2>",    "]d",                                          { desc = "Next error" })
 map("n", "<S-F2>",  "[d",                                          { desc = "Previous error" })
+
+-- Override `gr` (default LazyVim binding sends results to quickfix). Use snacks picker instead:
+-- pick a reference -> jump directly, no quickfix detour.
+map("n", "gr", function() Snacks.picker.lsp_references() end, { desc = "References (picker)" })
 
 -- ============================================================
 -- (4) REFACTOR
@@ -125,11 +129,13 @@ map("n", "<C-t>",  vim.lsp.buf.code_action, { desc = "Refactor This" })
 -- ============================================================
 -- (5) RUN / DEBUG
 -- ============================================================
-map("n", "<C-r>",  function()
+-- IDEA's ⌃R / ⌃D conflict with vim core (⌃R = redo, ⌃D = scroll half-page down).
+-- We keep the vim defaults and bind Run/Debug to F-keys (VSCode-style) + <leader>r* / <leader>d*.
+map("n", "<F5>",   function() require("dap").continue() end,          { desc = "Debug / Continue" })
+map("n", "<leader>rr", function()
   local ok, ov = pcall(require, "overseer")
   if ok then ov.run_template() end
-end, { desc = "Run" })
-map("n", "<C-d>",  function() require("dap").continue() end,          { desc = "Debug / Continue" })
+end, { desc = "Run (overseer)" })
 map("n", "<F8>",   function() require("dap").step_over() end,         { desc = "Step Over" })
 map("n", "<F7>",   function() require("dap").step_into() end,         { desc = "Step Into" })
 map("n", "<S-F8>", function() require("dap").step_out() end,          { desc = "Step Out" })

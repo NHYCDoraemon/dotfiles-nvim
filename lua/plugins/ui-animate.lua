@@ -6,10 +6,9 @@ return {
     opts = function()
       local animate = require("mini.animate")
       return {
-        cursor = {
-          enable = true,
-          timing = animate.gen_timing.linear({ duration = 100, unit = "total" }),
-        },
+        -- Cursor animation disabled: it interferes with large jumps like `gg`/`G`/`%`/search.
+        -- Smear-cursor.nvim handles the trailing-cursor effect instead.
+        cursor = { enable = false },
         scroll = {
           enable = true,
           timing = animate.gen_timing.linear({ duration = 150, unit = "total" }),
