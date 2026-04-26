@@ -38,7 +38,9 @@ return {
       },
       left = {
         { title = "Explorer",  ft = "snacks_layout_box" },
-        { ft = "snacks_picker_list", title = "Picker", size = { height = 0.3 } },
+        -- DO NOT dock snacks_picker_list here — it breaks the floating picker layout
+        -- by stealing the list pane and showing it as a side panel that looks like
+        -- quickfix. Snacks.picker manages its own floating window stack.
         { ft = "dapui_scopes",      title = "Scopes",      size = { height = 0.25 } },
         { ft = "dapui_breakpoints", title = "Breakpoints", size = { height = 0.25 } },
         { ft = "dapui_stacks",      title = "Call Stack",  size = { height = 0.25 } },
