@@ -9,10 +9,9 @@ return {
         -- Cursor animation disabled: it interferes with large jumps like `gg`/`G`/`%`/search.
         -- Smear-cursor.nvim handles the trailing-cursor effect instead.
         cursor = { enable = false },
-        scroll = {
-          enable = true,
-          timing = animate.gen_timing.linear({ duration = 150, unit = "total" }),
-        },
+        -- Scroll animation disabled: snacks.scroll (LazyVim default) already handles
+        -- smooth scrolling. Two engines together cause treesitter-context flicker.
+        scroll = { enable = false },
         resize = {
           enable = true,
           timing = animate.gen_timing.linear({ duration = 200, unit = "total" }),

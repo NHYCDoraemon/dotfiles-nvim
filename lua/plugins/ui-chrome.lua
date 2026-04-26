@@ -73,12 +73,14 @@ return {
     event = "VeryLazy",
     opts = {
       enable = true,
-      max_lines = 4,
+      max_lines = 3,
       min_window_height = 20,
       line_numbers = true,
       multiline_threshold = 1,
       trim_scope = "outer",
-      mode = "cursor",
+      -- "topline" = only redraw when viewport scrolls. Avoids flicker on intra-screen
+      -- cursor movement and during smooth-scroll frames.
+      mode = "topline",
       separator = "─",
       zindex = 20,
     },
