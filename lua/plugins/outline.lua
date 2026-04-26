@@ -3,12 +3,29 @@
 return {
   {
     "hedyhli/outline.nvim",
+    -- Auto-open Outline on first LSP attach so it's already there when you open
+    -- a code file. The hook fires once per nvim session; subsequent file opens
+    -- don't re-trigger (Outline tracks the active buffer automatically).
+    init = function()
+      local opened = false
+      vim.api.nvim_create_autocmd("LspAttach", {
+        group = vim.api.nvim_create_augroup("UserOutlineAutoOpen", { clear = true }),
+        callback = function()
+          if opened then return end
+          opened = true
+          vim.schedule(function()
+            -- `Outline!` opens without focusing — keeps cursor in the editor.
+            pcall(vim.cmd, "Outline!")
+          end)
+        end,
+      })
+    end,
     opts = {
       outline_window = {
         position = "right",
         width = 35,
         relative_width = false,
-        focus_on_open = true,
+        focus_on_open = false,  -- don't steal focus when auto-opening
         auto_close = false,
         auto_jump = false,
       },

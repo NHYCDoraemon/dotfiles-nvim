@@ -14,7 +14,7 @@ return {
       vim.opt.sidescrolloff = 36
 
       vim.g.neominimap = {
-        auto_enable = true,
+        auto_enable = false,  -- start disabled; toggle on demand with <leader>um
         layout = "split",
         split = {
           direction = "right",
