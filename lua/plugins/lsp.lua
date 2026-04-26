@@ -1,26 +1,20 @@
 return {
   -- Override LazyVim's `gr` LSP keymap to use Snacks picker (floating, no quickfix).
-  -- We use a direct LspAttach autocmd that runs *after* LazyVim's keymap setup and
-  -- forcibly sets a buffer-local `gr`. This is more reliable than mutating LazyVim's
-  -- keymap list (which had ordering issues with the resolver).
+  -- LazyVim.lsp.on_attach() is the framework-supported hook that runs AFTER LazyVim's
+  -- own LSP keymap setup, so our buffer-local `gr` cleanly overrides it. Earlier
+  -- attempts via `keys` mutation and a plain LspAttach autocmd lost the ordering race.
   {
     "neovim/nvim-lspconfig",
     init = function()
-      vim.api.nvim_create_autocmd("LspAttach", {
-        group = vim.api.nvim_create_augroup("UserGrPickerOverride", { clear = true }),
-        callback = function(args)
-          vim.schedule(function()
-            if not vim.api.nvim_buf_is_valid(args.buf) then return end
-            vim.keymap.set("n", "gr", function()
-              if _G.Snacks and _G.Snacks.picker and _G.Snacks.picker.lsp_references then
-                _G.Snacks.picker.lsp_references()
-              else
-                vim.lsp.buf.references()
-              end
-            end, { buffer = args.buf, desc = "References (picker)", silent = true })
-          end)
-        end,
-      })
+      LazyVim.lsp.on_attach(function(_, buffer)
+        vim.keymap.set("n", "gr", function()
+          if _G.Snacks and _G.Snacks.picker and _G.Snacks.picker.lsp_references then
+            _G.Snacks.picker.lsp_references()
+          else
+            vim.lsp.buf.references()
+          end
+        end, { buffer = buffer, desc = "References (picker, no quickfix)", silent = true })
+      end)
     end,
   },
 
