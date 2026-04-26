@@ -1,7 +1,7 @@
 return {
   {
     "linux-cultist/venv-selector.nvim",
-    branch = "regexp",
+    -- regexp is now the default branch upstream; no `branch = ...` needed.
     dependencies = {
       "neovim/nvim-lspconfig",
       "nvim-telescope/telescope.nvim",

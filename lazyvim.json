@@ -20,6 +20,8 @@
     "lazyvim.plugins.extras.util.dot",
     "lazyvim.plugins.extras.util.mini-hipatterns"
   ],
-  "news": {},
+  "news": {
+    "NEWS.md": "11866"
+  },
   "version": 8
 }
