@@ -1,4 +1,21 @@
 return {
+  -- Override LazyVim's `gr` LSP keymap to use Snacks picker instead of quickfix.
+  -- LazyVim sets `gr` as a buffer-local mapping on LspAttach, which would shadow any
+  -- global `gr` we set in keymaps.lua. Mutating LazyVim's keymap list is the way to
+  -- intercept it before that buffer-local map is created.
+  {
+    "neovim/nvim-lspconfig",
+    opts = function()
+      local keys = require("lazyvim.plugins.lsp.keymaps").get()
+      keys[#keys + 1] = {
+        "gr",
+        function() Snacks.picker.lsp_references() end,
+        desc = "References (picker, no quickfix)",
+        has = "references",
+      }
+    end,
+  },
+
   -- Replace pyright with basedpyright in the Python extra.
   {
     "neovim/nvim-lspconfig",
