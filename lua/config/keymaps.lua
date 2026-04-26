@@ -174,6 +174,22 @@ map("n", "<D-S-F12>", function()
   if ok then edgy.toggle() end
 end, { desc = "Hide / restore all tool windows" })
 
+-- Leader-key fallbacks for tool windows (terminal-agnostic).
+-- Use these if your terminal doesn't forward Cmd+digit.
+-- <leader> = <Space>; <leader>1-4 are taken by grapple bookmarks, so we use letters here.
+map("n", "<leader>oe", function() Snacks.explorer() end,            { desc = "Tool: Explorer" })
+map("n", "<leader>oo", "<cmd>Outline<CR>",                          { desc = "Tool: Structure (Outline)" })
+map("n", "<leader>or", "<cmd>OverseerToggle<CR>",                   { desc = "Tool: Run / Tasks" })
+map("n", "<leader>od", function() require("dapui").toggle() end,    { desc = "Tool: Debug UI" })
+map("n", "<leader>op", "<cmd>Trouble diagnostics toggle<CR>",       { desc = "Tool: Problems" })
+map("n", "<leader>oD", "<cmd>DBUIToggle<CR>",                       { desc = "Tool: Database" })
+map("n", "<leader>og", "<cmd>Neogit<CR>",                           { desc = "Tool: Git (Neogit)" })
+map("n", "<leader>ot", function() Snacks.terminal() end,            { desc = "Tool: Terminal" })
+map("n", "<leader>oh", function()
+  local ok, edgy = pcall(require, "edgy")
+  if ok then edgy.toggle() end
+end, { desc = "Tool: Hide / restore all" })
+
 -- ============================================================
 -- (8) TABS
 -- ============================================================
