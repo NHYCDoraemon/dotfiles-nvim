@@ -1,27 +1,4 @@
 return {
-  -- Force LSP pickers (gd / gr / gI / gy / symbols) to use the same floating
-  -- layout as <leader>ff / <leader>fg. Snacks' built-in defaults for these
-  -- sources mark them with auto_confirm + reuse_win, which (combined with our
-  -- edgy.nvim config) end up rendering the picker as a left-side panel.
-  {
-    "folke/snacks.nvim",
-    opts = {
-      picker = {
-        sources = {
-          lsp_references       = { layout = { preset = "default" }, auto_confirm = false },
-          lsp_definitions      = { layout = { preset = "default" }, auto_confirm = false },
-          lsp_implementations  = { layout = { preset = "default" }, auto_confirm = false },
-          lsp_type_definitions = { layout = { preset = "default" }, auto_confirm = false },
-          lsp_declarations     = { layout = { preset = "default" }, auto_confirm = false },
-          lsp_incoming_calls   = { layout = { preset = "default" }, auto_confirm = false },
-          lsp_outgoing_calls   = { layout = { preset = "default" }, auto_confirm = false },
-          lsp_symbols          = { layout = { preset = "default" } },
-          lsp_workspace_symbols= { layout = { preset = "default" } },
-        },
-      },
-    },
-  },
-
   -- Replace pyright with basedpyright in the Python extra.
   {
     "neovim/nvim-lspconfig",

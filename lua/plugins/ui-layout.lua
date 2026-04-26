@@ -37,10 +37,11 @@ return {
         { ft = "noice",           size = { height = 0.3 }, filter = function(buf, win) return vim.api.nvim_win_get_config(win).relative == "" end },
       },
       left = {
-        { title = "Explorer",  ft = "snacks_layout_box" },
-        -- DO NOT dock snacks_picker_list here — it breaks the floating picker layout
-        -- by stealing the list pane and showing it as a side panel that looks like
-        -- quickfix. Snacks.picker manages its own floating window stack.
+        -- DO NOT add `snacks_layout_box` here — it is the SHARED filetype of every
+        -- Snacks picker container (files, grep, lsp_references, explorer, …).
+        -- Listing it forced edgy to dock every picker on the left, killing the
+        -- centered floating layout. Snacks.explorer already uses its own sidebar
+        -- layout (position=left), so no edgy entry is needed for it.
         { ft = "dapui_scopes",      title = "Scopes",      size = { height = 0.25 } },
         { ft = "dapui_breakpoints", title = "Breakpoints", size = { height = 0.25 } },
         { ft = "dapui_stacks",      title = "Call Stack",  size = { height = 0.25 } },
