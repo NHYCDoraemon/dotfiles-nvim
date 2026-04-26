@@ -116,9 +116,7 @@ map("n", "<A-F7>",  function() Snacks.picker.lsp_references() end, { desc = "Fin
 map("n", "<F2>",    "]d",                                          { desc = "Next error" })
 map("n", "<S-F2>",  "[d",                                          { desc = "Previous error" })
 
--- Override `gr` (default LazyVim binding sends results to quickfix). Use snacks picker instead:
--- pick a reference -> jump directly, no quickfix detour.
-map("n", "gr", function() Snacks.picker.lsp_references() end, { desc = "References (picker)" })
+-- (`gr` is now handled by the editor.snacks_picker LazyVim extra → Snacks.picker.lsp_references.)
 
 -- ============================================================
 -- (4) REFACTOR
