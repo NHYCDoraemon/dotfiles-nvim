@@ -194,16 +194,17 @@ for cmd in node python3; do
   fi
 done
 
-if command -v java >/dev/null 2>&1; then
-  java_ver=$(java -version 2>&1 | head -1 | grep -oE '"[0-9]+' | tr -d '"' || true)
-  if [[ "$java_ver" == "17" || "$java_ver" -ge 17 ]] 2>/dev/null; then
-    ok "java: $(java -version 2>&1 | head -1)"
-  else
-    warn "java present but not version 17+ (got: $java_ver). jdtls expects 17+."
-    warn "  install Temurin 17 with: brew install --cask temurin@17"
-  fi
-else
-  warn "java not found — required for jdtls. Install: brew install --cask temurin@17"
+# jdtls (Eclipse JDT Language Server) NEEDS Java 21+ to *run its own JVM*.
+# Projects can still compile against Java 17 — that's configured in lang-java.lua
+# via the `runtimes` block. So we want BOTH JDKs available:
+#   * Java 21 → jdtls process
+#   * Java 17 → project compile target (most enterprise codebases)
+have_jhome() { /usr/libexec/java_home -v "$1" >/dev/null 2>&1; }
+if have_jhome 21; then ok "Java 21: $(/usr/libexec/java_home -v 21)"
+else warn "Java 21 missing (required by jdtls). Install: brew install --cask temurin@21"
+fi
+if have_jhome 17; then ok "Java 17: $(/usr/libexec/java_home -v 17)"
+else warn "Java 17 missing (project target). Install: brew install --cask temurin@17"
 fi
 
 # ============================================================================
