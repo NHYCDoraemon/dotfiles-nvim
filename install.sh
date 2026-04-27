@@ -100,7 +100,7 @@ for pkg in "${BREW_FORMULAE[@]}"; do
 done
 
 step "Required packages (casks)"
-BREW_CASKS=(font-jetbrains-mono-nerd-font ghostty)
+BREW_CASKS=(font-maple-mono-nf font-jetbrains-mono-nerd-font ghostty)
 for cask in "${BREW_CASKS[@]}"; do
   if brew list --cask "$cask" >/dev/null 2>&1; then
     ok "$cask"
