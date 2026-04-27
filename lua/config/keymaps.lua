@@ -258,5 +258,41 @@ map("n", "<leader>uL", function()
   end
 end, { desc = "Theme: toggle dark / light" })
 
+-- ============================================================
+-- (12) FONT LIVE PICKER (Neovide only)
+-- ============================================================
+-- Curated code-font list. Live preview works in Neovide (changes guifont).
+-- In terminal nvim the font is owned by the terminal — picker shows a notice
+-- with the line to paste into ~/.config/ghostty/config and reminds to restart.
+local FONTS = {
+  { family = "Maple Mono NF",            note = "current — modern, CJK-friendly, beautiful italic" },
+  { family = "VictorMono Nerd Font",     note = "elegant cursive italic — best with rose-pine" },
+  { family = "GeistMono Nerd Font",      note = "Vercel — clean, minimal, modern" },
+  { family = "CommitMono Nerd Font",     note = "ultra-readable, balanced spacing" },
+  { family = "MonaspiceNe Nerd Font",    note = "GitHub Monaspace Neon — geometric" },
+  { family = "JetBrainsMono Nerd Font",  note = "IDE standard — neutral, safe" },
+}
+
+map("n", "<leader>uf", function()
+  vim.ui.select(FONTS, {
+    prompt = vim.g.neovide and "Pick font (live preview):" or "Pick font (Ghostty needs restart):",
+    format_item = function(f) return string.format("%-26s  %s", f.family, f.note) end,
+  }, function(choice)
+    if not choice then return end
+    if vim.g.neovide then
+      vim.o.guifont = choice.family .. ":h15.5"
+      vim.notify("Font → " .. choice.family, vim.log.levels.INFO)
+    else
+      local snippet = "font-family = " .. choice.family
+      vim.fn.setreg("+", snippet)
+      vim.notify(
+        "Terminal mode — copied to clipboard:\n  " .. snippet .. "\n\nPaste into ~/.config/ghostty/config (replace the existing first font-family line), then ⌘Q + reopen Ghostty.",
+        vim.log.levels.INFO,
+        { title = "Font picker", timeout = 8000 }
+      )
+    end
+  end)
+end, { desc = "Font: pick (live in Neovide, copy-snippet in terminal)" })
+
 -- Remove a few LazyVim defaults that conflict with our IDEA mappings.
 del("n", "<leader>l") -- avoid clash with <D-l>
