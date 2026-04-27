@@ -47,7 +47,11 @@ return {
         support_paste_from_clipboard = true,
       },
       windows = {
-        width = 35,
+        -- 35% was too narrow — Avante's sidebar internally creates a
+        -- selected_code_container sub-split, and on smaller terminal /
+        -- Neovide windows the resulting math fell below E36 threshold.
+        -- 50% gives reliable room; reduce later if you want more code area.
+        width = 50,
         sidebar_header = { rounded = true, align = "center" },
         ask = { floating = true, start_insert = true, border = "rounded" },
         edit = { border = "rounded", start_insert = true },
