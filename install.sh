@@ -185,6 +185,17 @@ else
   warn "go not found — skipping go-callvis / goda install. Re-run after installing Go."
 fi
 
+step "Mermaid CLI (for .mmd file rendering)"
+if command -v mmdc >/dev/null 2>&1; then
+  ok "mmdc: $(mmdc --version 2>&1 | head -1)"
+elif command -v npm >/dev/null 2>&1; then
+  info "installing @mermaid-js/mermaid-cli globally..."
+  npm install -g @mermaid-js/mermaid-cli >/dev/null 2>&1 && ok "mmdc installed" \
+    || warn "mmdc install failed — install manually: npm install -g @mermaid-js/mermaid-cli"
+else
+  warn "npm not found; install Node first then re-run for mermaid-cli."
+fi
+
 step "Optional language toolchains"
 for cmd in node python3; do
   if command -v "$cmd" >/dev/null 2>&1; then
