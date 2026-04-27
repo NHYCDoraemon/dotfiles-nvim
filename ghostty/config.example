@@ -1,0 +1,45 @@
+font-family = JetBrainsMono Nerd Font
+font-size = 14.5
+font-style = Regular
+font-style-italic = Italic
+font-feature = +calt, +liga
+theme = Catppuccin Mocha
+window-padding-x = 8
+window-padding-y = 8
+macos-option-as-alt = true
+
+# Fullscreen behavior: chain `toggle_fullscreen` + `toggle_window_decorations`.
+# When entering fullscreen, also hide titlebar (which contains the tabs).
+# When exiting, restore both. The toggles stay in sync because they always
+# fire together on the same keybind.
+keybind = super+enter=toggle_fullscreen
+keybind = chain=toggle_window_decorations
+keybind = super+ctrl+f=toggle_fullscreen
+keybind = chain=toggle_window_decorations
+
+# Release Cmd shortcuts so nvim receives them via Kitty Keyboard Protocol.
+keybind = cmd+w=unbind
+keybind = cmd+t=unbind
+keybind = cmd+n=unbind
+keybind = cmd+r=unbind
+keybind = cmd+d=unbind
+keybind = cmd+e=unbind
+keybind = cmd+l=unbind
+keybind = cmd+k=unbind
+keybind = cmd+f=unbind
+keybind = cmd+b=unbind
+keybind = cmd+u=unbind
+keybind = cmd+p=unbind
+keybind = cmd+j=unbind
+keybind = cmd+g=unbind
+keybind = cmd+o=unbind
+keybind = cmd+y=unbind
+keybind = cmd+1=unbind
+keybind = cmd+2=unbind
+keybind = cmd+3=unbind
+keybind = cmd+4=unbind
+keybind = cmd+5=unbind
+keybind = cmd+6=unbind
+keybind = cmd+7=unbind
+keybind = cmd+8=unbind
+keybind = cmd+9=unbind
