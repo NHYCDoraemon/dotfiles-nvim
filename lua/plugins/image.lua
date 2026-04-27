@@ -15,10 +15,12 @@ return {
     opts = { image = { enabled = false } },
   },
 
-  -- image.nvim — Neovide ONLY.
+  -- image.nvim. Installed unconditionally. We CAN'T gate by `vim.g.neovide` at
+  -- spec eval time — Neovide sets that variable AFTER lazy.nvim resolves specs,
+  -- so `enabled = function() return vim.g.neovide ~= nil end` always evaluated
+  -- to false and image.nvim never installed.
   {
     "3rd/image.nvim",
-    enabled = function() return vim.g.neovide ~= nil end,
     build = false,
     event = "VeryLazy",
     opts = {
@@ -48,10 +50,9 @@ return {
     },
   },
 
-  -- diagram.nvim — Neovide ONLY (renders ```mermaid``` blocks inline in markdown).
+  -- diagram.nvim — also unconditional (same vim.g.neovide timing issue).
   {
     "3rd/diagram.nvim",
-    enabled = function() return vim.g.neovide ~= nil end,
     dependencies = { "3rd/image.nvim" },
     ft = { "markdown", "mermaid" },
     opts = function()
