@@ -22,7 +22,8 @@ return {
   {
     "3rd/image.nvim",
     build = false,
-    event = "VeryLazy",
+    lazy = false,        -- eager: hijack autocmds for .png/.jpg must be in
+    priority = 50,       -- place before any image file is opened
     opts = {
       backend = "kitty",
       processor = "magick_cli",

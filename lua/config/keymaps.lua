@@ -360,5 +360,35 @@ map("n", "<leader>P", function()
   })
 end, { desc = "Switch project (save + restore session)" })
 
+-- ============================================================
+-- (15) IMAGE / DIAGRAM DEBUG
+-- ============================================================
+-- Print everything we know about image rendering: env, loaded plugins,
+-- backend choice, CLI tools available. Run it then paste the notification.
+map("n", "<leader>uI", function()
+  local image_ok, image = pcall(require, "image")
+  local diagram_ok = pcall(require, "diagram")
+  local lines = {
+    "=== Image / Diagram Debug ===",
+    "GUI / TUI:",
+    "  vim.g.neovide      = " .. tostring(vim.g.neovide),
+    "  TERM_PROGRAM       = " .. tostring(vim.env.TERM_PROGRAM),
+    "  TERM               = " .. tostring(vim.env.TERM),
+    "Plugins:",
+    "  image.nvim loaded  = " .. tostring(image_ok),
+    "  diagram.nvim loaded= " .. tostring(diagram_ok),
+  }
+  if image_ok and image and image.state then
+    table.insert(lines, "  image backend      = " .. tostring(image.state.backend and image.state.backend.name or "?"))
+    table.insert(lines, "  image processor    = " .. tostring(image.state.processor and image.state.processor.name or "?"))
+  end
+  table.insert(lines, "CLIs:")
+  table.insert(lines, "  magick             = " .. (vim.fn.executable("magick") == 1 and "yes" or "MISSING"))
+  table.insert(lines, "  mmdc               = " .. (vim.fn.executable("mmdc") == 1 and "yes" or "MISSING"))
+  table.insert(lines, "  plantuml           = " .. (vim.fn.executable("plantuml") == 1 and "yes" or "MISSING"))
+  vim.notify(table.concat(lines, "\n"), vim.log.levels.INFO, { title = "Image Debug", timeout = 30000 })
+  print(table.concat(lines, "\n"))
+end, { desc = "Image: print debug info" })
+
 -- Remove a few LazyVim defaults that conflict with our IDEA mappings.
 del("n", "<leader>l") -- avoid clash with <D-l>
