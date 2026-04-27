@@ -57,17 +57,24 @@ return {
               end
               if vim.fn.filereadable(out_path) ~= 1 then return end
 
-              local existing = _G.__diagram_preview[buf]
-              if existing and vim.api.nvim_win_is_valid(existing) then
-                vim.api.nvim_win_call(existing, function()
-                  vim.cmd("edit! " .. vim.fn.fnameescape(out_path))
-                end)
+              -- Same dual strategy as mermaid: Neovide → inline split,
+              -- terminal → macOS Preview.app.
+              if vim.g.neovide then
+                local existing = _G.__diagram_preview[buf]
+                if existing and vim.api.nvim_win_is_valid(existing) then
+                  vim.api.nvim_win_call(existing, function()
+                    vim.cmd("edit! " .. vim.fn.fnameescape(out_path))
+                  end)
+                else
+                  vim.cmd("vsplit " .. vim.fn.fnameescape(out_path))
+                  _G.__diagram_preview[buf] = vim.api.nvim_get_current_win()
+                  vim.cmd("wincmd p")
+                end
+                vim.notify("PlantUML → preview split (Neovide inline)", vim.log.levels.INFO)
               else
-                vim.cmd("vsplit " .. vim.fn.fnameescape(out_path))
-                _G.__diagram_preview[buf] = vim.api.nvim_get_current_win()
-                vim.cmd("wincmd p")
+                vim.fn.jobstart({ "open", out_path }, { detach = true })
+                vim.notify("PlantUML → opened in Preview.app", vim.log.levels.INFO)
               end
-              vim.notify("PlantUML rendered → preview split", vim.log.levels.INFO)
             end)
           end,
         })
