@@ -23,10 +23,13 @@ return {
   },
 
   -- Minimal / soft — warm pastel, has Dawn (light) variant.
+  -- Set as the default colorscheme; loaded eagerly with high priority so
+  -- there's no flash of default colors at startup.
   {
     "rose-pine/neovim",
     name = "rose-pine",
-    lazy = true,
+    lazy = false,
+    priority = 1000,
     opts = {
       variant = "auto",     -- main (dark) / moon (medium) / dawn (light)
       dark_variant = "main",

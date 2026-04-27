@@ -82,11 +82,11 @@ return {
     },
   },
 
-  -- Set Catppuccin Mocha as default at LazyVim level.
+  -- Set Rose Pine as default at LazyVim level.
   {
     "LazyVim/LazyVim",
     opts = {
-      colorscheme = "catppuccin-mocha",
+      colorscheme = "rose-pine",
     },
   },
 }

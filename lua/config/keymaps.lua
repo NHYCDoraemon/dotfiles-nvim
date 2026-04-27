@@ -245,18 +245,18 @@ end, { desc = "Avante: refresh" })
 -- ============================================================
 -- (11) THEME TOGGLE
 -- ============================================================
--- Quick day/night swap between Catppuccin Mocha (dark) and Catppuccin Latte (light).
--- Both flavors share the same plugin → no extra install, integrations identical.
+-- Quick day/night swap within the Rose Pine family.
+-- Main (dark) ↔ Dawn (light) — both ship with the rose-pine plugin.
 map("n", "<leader>uL", function()
   local current = vim.g.colors_name or ""
-  if current:match("latte") then
-    vim.cmd("colorscheme catppuccin-mocha")
-    vim.notify("Theme: Catppuccin Mocha (dark)", vim.log.levels.INFO)
+  if current:match("dawn") then
+    vim.cmd("colorscheme rose-pine-main")
+    vim.notify("Theme: Rose Pine Main (dark)", vim.log.levels.INFO)
   else
-    vim.cmd("colorscheme catppuccin-latte")
-    vim.notify("Theme: Catppuccin Latte (light)", vim.log.levels.INFO)
+    vim.cmd("colorscheme rose-pine-dawn")
+    vim.notify("Theme: Rose Pine Dawn (light)", vim.log.levels.INFO)
   end
-end, { desc = "Theme: toggle dark / light" })
+end, { desc = "Theme: toggle dark / light (rose-pine)" })
 
 -- ============================================================
 -- (12) FONT LIVE PICKER (Neovide only)
