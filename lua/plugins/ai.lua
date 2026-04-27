@@ -1,68 +1,93 @@
--- Avante.nvim — AI assistant.
+-- AI assistant — CodeCompanion.nvim.
 --
--- Provider strategy: use Avante's built-in `openai` provider directly with
--- a SiliconFlow endpoint override. Cleaner than `__inherited_from = "openai"`
--- with custom name — avoids edge cases in provider resolution.
+-- We migrated away from Avante.nvim because of architectural fragility:
+-- Avante creates a nested `selected_code_container` split inside its sidebar
+-- which throws E36 'not enough room' on any non-huge window — there's no
+-- reliable opt-out (without_selection runs after render, mode/disable_tools
+-- toggles produce other deadlocks). CodeCompanion uses a single chat buffer,
+-- no nested splits — no E36, no prompt_input deadlock.
 --
--- Tool-calling is DISABLED (`disable_tools = true`) at the provider level
--- because DeepSeek via SiliconFlow doesn't reliably implement OpenAI's
--- function-calling spec; agentic mode tries tool calls → response parsing
--- hangs → prompt_input deadlocks.
+-- Provider: SiliconFlow's OpenAI-compatible endpoint, model DeepSeek-V4-Flash.
+-- Set `SILICONFLOW_API_KEY` in your shell rc.
 return {
   {
-    "yetone/avante.nvim",
-    event = "VeryLazy",
-    version = false,
-    build = "make",
+    "olimorris/codecompanion.nvim",
     dependencies = {
-      "stevearc/dressing.nvim",
       "nvim-lua/plenary.nvim",
-      "MunifTanjim/nui.nvim",
-      "nvim-mini/mini.icons",
-      "zbirenbaum/copilot.lua",
-      {
-        "HakonHarnes/img-clip.nvim",
-        event = "VeryLazy",
-        opts = { default = { embed_image_as_base64 = false, prompt_for_file_name = false } },
-      },
-      {
-        "MeanderingProgrammer/render-markdown.nvim",
-        opts = { file_types = { "markdown", "Avante" } },
-        ft = { "markdown", "Avante" },
-      },
+      "nvim-treesitter/nvim-treesitter",
+    },
+    cmd = {
+      "CodeCompanion",
+      "CodeCompanionChat",
+      "CodeCompanionActions",
+      "CodeCompanionCmd",
+    },
+    keys = {
+      { "<leader>aa", "<cmd>CodeCompanionChat Toggle<cr>", mode = { "n", "v" }, desc = "AI: chat (toggle)" },
+      { "<leader>ac", "<cmd>CodeCompanionChat Add<cr>",     mode = { "v" },      desc = "AI: add selection to chat" },
+      { "<leader>ae", "<cmd>CodeCompanion<cr>",             mode = { "v" },      desc = "AI: inline edit selection" },
+      { "<leader>ap", "<cmd>CodeCompanionActions<cr>",      mode = { "n", "v" }, desc = "AI: actions palette" },
     },
     opts = {
-      provider = "openai",
-      providers = {
-        openai = {
-          endpoint     = "https://api.siliconflow.cn/v1",
-          model        = "deepseek-ai/DeepSeek-V4-Flash",
-          api_key_name = "SILICONFLOW_API_KEY",
-          disable_tools = true,  -- DeepSeek tool-call format isn't OpenAI-spec — turn off
-          extra_request_body = {
-            temperature = 0,
-            max_tokens  = 8192,
-          },
+      adapters = {
+        -- Define a SiliconFlow adapter by extending the built-in
+        -- `openai_compatible` template — same OpenAI chat-completion API,
+        -- just pointed at SiliconFlow's endpoint.
+        http = {
+          siliconflow = function()
+            return require("codecompanion.adapters").extend("openai_compatible", {
+              env = {
+                url     = "https://api.siliconflow.cn",
+                -- `cmd:` prefix tells CodeCompanion to RUN this as a shell
+                -- command and use stdout as the value. We invoke an interactive
+                -- zsh (`-ic`) so that ~/.zshrc is sourced — this is needed
+                -- because GUI apps like Neovide launched from Spotlight / Dock
+                -- DON'T inherit shell env vars. Without `cmd:`, the literal
+                -- string "SILICONFLOW_API_KEY" gets sent as the token → 401.
+                api_key = "cmd:zsh -ic 'echo $SILICONFLOW_API_KEY'",
+                chat_url = "/v1/chat/completions",
+              },
+              schema = {
+                model = { default = "deepseek-ai/DeepSeek-V4-Flash" },
+              },
+            })
+          end,
         },
       },
-      behaviour = {
-        auto_suggestions = false,
-        auto_set_highlight_group = true,
-        auto_set_keymaps = true,
-        auto_apply_diff_after_generation = false,
-        support_paste_from_clipboard = true,
+
+      strategies = {
+        chat   = { adapter = "siliconflow" },
+        inline = { adapter = "siliconflow" },
+        cmd    = { adapter = "siliconflow" },
       },
-      windows = {
-        width = 50,  -- prevents E36 'not enough room' from selected_code_container
-        sidebar_header = { rounded = true, align = "center" },
-        ask  = { floating = true, start_insert = true, border = "rounded" },
-        edit = { border = "rounded", start_insert = true },
+
+      display = {
+        chat = {
+          window = {
+            layout   = "vertical",   -- side panel; "horizontal" / "float" / "buffer" alternatives
+            width    = 0.4,           -- 40% of screen width
+            height   = 0.9,
+            border   = "rounded",
+            relative = "editor",
+            opts = { signcolumn = "no", spell = false, wrap = true },
+          },
+          show_settings = false,
+          show_token_count = true,
+          start_in_insert_mode = true,
+        },
+        action_palette = {
+          provider = "default",     -- can be "telescope" / "snacks"
+          opts     = { show_default_actions = true, show_default_prompt_library = true },
+        },
+        diff = {
+          enabled  = true,
+          provider = "default",
+        },
       },
-      mappings = {
-        ask     = "<leader>aa",
-        edit    = "<leader>ae",
-        refresh = "<leader>ar",
-        toggle  = { default = "<leader>at" },
+
+      opts = {
+        log_level = "ERROR",
+        send_code = true,            -- include selected code automatically when invoked from visual mode
       },
     },
   },
