@@ -210,19 +210,19 @@ return {
       code = {
         enabled = true,
         sign = false,
-        style = "full",                         -- show language label + bg
-        position = "left",
-        language_pad = 0,
+        -- `language` = just show language tag, no fake "preview frame" around the
+        -- block. Border / min_width / pad were creating a visually empty box
+        -- around mermaid blocks on Ghostty (since image render fails silently
+        -- on the kitty graphics path) — easy to mistake for a broken popup.
+        style = "language",
+        position = "right",
         language_name = true,
-        disable_background = { "diff" },
         width = "block",
-        left_pad = 2,
-        right_pad = 2,
-        min_width = 60,
-        border = "thick",                       -- soft block border
-        above = " ",
-        below = " ",
-        highlight_inline = "RenderMarkdownCodeInline",  -- inline `code` background
+        left_pad = 0,
+        right_pad = 0,
+        min_width = 0,
+        border = "none",
+        highlight_inline = "RenderMarkdownCodeInline",
       },
 
       dash = { enabled = true, icon = "─", width = "full" },
