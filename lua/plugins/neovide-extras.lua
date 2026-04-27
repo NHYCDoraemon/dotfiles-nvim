@@ -17,6 +17,20 @@ return {
         focused_win = false,
         only_win = false,
       },
+      -- Skip filetypes that have their own UI / chrome (Avante chat, dap-ui,
+      -- outline, etc.) — incline's floating label otherwise overlaps them.
+      ignore = {
+        unlisted_buffers = true,
+        floating_wins = true,
+        filetypes = {
+          "Avante", "AvanteInput", "AvanteSelectedFiles",
+          "Outline", "snacks_layout_box", "snacks_dashboard",
+          "trouble", "Trouble", "dap-repl", "dapui_console",
+          "dapui_scopes", "dapui_breakpoints", "dapui_stacks", "dapui_watches",
+          "neogit", "DiffviewFiles", "DiffviewFileHistory",
+          "lazy", "mason", "help", "noice",
+        },
+      },
       render = function(props)
         local devicons = require("nvim-web-devicons")
         local filename = vim.fn.fnamemodify(vim.api.nvim_buf_get_name(props.buf), ":t")
