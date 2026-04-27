@@ -327,5 +327,38 @@ map("n", "<leader>uV", function()
   end)
 end, { desc = "Neovide: pick cursor VFX mode" })
 
+-- ============================================================
+-- (14) PROJECT SWITCHER (with session save/restore)
+-- ============================================================
+-- IDEA-style "Open Recent Project": save the current project's session,
+-- jump to the chosen project's directory, close all buffers, then load
+-- that project's session if one exists.
+--
+-- <leader>fp keeps the lighter Snacks default behaviour (just change cwd).
+-- <leader>P  is the full switch — recommended for daily project hopping.
+map("n", "<leader>P", function()
+  Snacks.picker.projects({
+    confirm = function(picker, item)
+      picker:close()
+      if not item then return end
+      local target = item.file or item.cwd or item.path
+      if not target or target == "" then
+        vim.notify("No project path on this entry", vim.log.levels.WARN)
+        return
+      end
+      -- Save current state
+      local persist_ok, persist = pcall(require, "persistence")
+      if persist_ok then pcall(persist.save) end
+      -- Switch directory
+      vim.cmd("cd " .. vim.fn.fnameescape(target))
+      -- Close all buffers
+      vim.cmd("silent! %bdelete")
+      -- Restore target project's session if it has one
+      if persist_ok then pcall(persist.load) end
+      vim.notify("Project → " .. target, vim.log.levels.INFO)
+    end,
+  })
+end, { desc = "Switch project (save + restore session)" })
+
 -- Remove a few LazyVim defaults that conflict with our IDEA mappings.
 del("n", "<leader>l") -- avoid clash with <D-l>
