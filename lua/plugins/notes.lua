@@ -103,20 +103,25 @@ return {
     },
   },
 
-  -- Inline image rendering for markdown (works fully in Neovide; in Ghostty
-  -- needs Kitty image protocol — Ghostty 1.3+ supports it).
+  -- Inline image rendering for markdown — works in Neovide AND in Ghostty 1.3+
+  -- (uses Kitty graphics protocol). `force = true` bypasses Snacks' DA1 terminal
+  -- detection which sometimes fails to recognize Ghostty even though it supports
+  -- the protocol. Combined with SNACKS_GHOSTTY=1 in options.lua, this guarantees
+  -- mermaid blocks / images / math render inline.
   {
     "folke/snacks.nvim",
     opts = {
       image = {
         enabled = true,
+        force = true,                -- skip detection, just try rendering
         doc = {
           enabled = true,
-          inline = true,
-          float  = true,
+          inline = true,             -- render at the position they appear in the doc
+          float  = true,             -- fall back to float if inline unsupported
           max_width  = 80,
           max_height = 32,
         },
+        math = { enabled = true },   -- LaTeX rendering
         convert = {
           notify = true,
           command = "magick",

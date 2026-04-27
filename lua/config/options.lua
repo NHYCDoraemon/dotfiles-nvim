@@ -66,6 +66,21 @@ opt.timeout = true
 opt.timeoutlen = 600
 
 -- ============================================================================
+-- Force Snacks.image to enable Ghostty graphics protocol.
+--
+-- Snacks tries to auto-detect terminal capabilities by sending a DA1 (Device
+-- Attributes) query and parsing the reply. Ghostty supports the Kitty graphics
+-- protocol but its DA1 response doesn't always match Snacks' regex, so the
+-- detection fails and Snacks falls back to "graphics not supported".
+--
+-- Setting SNACKS_GHOSTTY=1 in the environment overrides detection. We only
+-- set it when we know we're actually in Ghostty (TERM_PROGRAM check).
+-- ============================================================================
+if vim.env.TERM_PROGRAM == "ghostty" then
+  vim.env.SNACKS_GHOSTTY = "1"
+end
+
+-- ============================================================================
 -- GUI nvim (Neovide) — only applies when running inside Neovide.
 -- Terminal nvim ignores `vim.g.neovide` (which is unset there).
 -- Ghostty's font config does NOT apply to Neovide; use vim's guifont here.

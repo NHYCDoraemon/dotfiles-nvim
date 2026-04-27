@@ -25,15 +25,18 @@ return {
   {
     "folke/snacks.nvim",
     init = function()
+      -- Track the preview window per source buffer so re-render reuses the
+      -- same split instead of stacking new ones.
+      _G.__mermaid_preview = _G.__mermaid_preview or {}
+
       local function render_mermaid(buf)
         buf = buf or vim.api.nvim_get_current_buf()
         local src = vim.api.nvim_buf_get_name(buf)
-        if src == "" or not src:match("%.mmd$") and not src:match("%.mermaid$") then
+        if src == "" or (not src:match("%.mmd$") and not src:match("%.mermaid$")) then
           vim.notify("Not a .mmd file — open the source mermaid file first.", vim.log.levels.WARN)
           return
         end
-        local out = vim.fn.fnamemodify(src, ":t:r") .. ".png"
-        local out_path = vim.fn.tempname() .. "_" .. out
+        local out_path = vim.fn.tempname() .. "_" .. vim.fn.fnamemodify(src, ":t:r") .. ".png"
         local cmd = string.format("mmdc -i %s -o %s -b transparent -t dark",
           vim.fn.shellescape(src), vim.fn.shellescape(out_path))
         vim.fn.jobstart(cmd, {
@@ -43,17 +46,21 @@ return {
                 vim.notify("mmdc render failed (exit " .. code .. ")", vim.log.levels.ERROR)
                 return
               end
-              if vim.fn.filereadable(out_path) == 1 then
-                if _G.Snacks and _G.Snacks.image then
-                  _G.Snacks.image.placement.new(buf, out_path, {
-                    inline = false,
-                    pos = { 1, 0 },
-                    type = "image",
-                  })
-                end
-                vim.notify("Mermaid rendered: " .. out_path, vim.log.levels.INFO)
+              if vim.fn.filereadable(out_path) ~= 1 then return end
+
+              -- Reuse existing preview split if open; else create a new vsplit.
+              local existing = _G.__mermaid_preview[buf]
+              if existing and vim.api.nvim_win_is_valid(existing) then
+                vim.api.nvim_win_call(existing, function()
+                  vim.cmd("edit! " .. vim.fn.fnameescape(out_path))
+                end)
+              else
                 vim.cmd("vsplit " .. vim.fn.fnameescape(out_path))
+                _G.__mermaid_preview[buf] = vim.api.nvim_get_current_win()
+                -- Jump back to the source buffer so user keeps editing it.
+                vim.cmd("wincmd p")
               end
+              vim.notify("Mermaid rendered → preview split", vim.log.levels.INFO)
             end)
           end,
         })
