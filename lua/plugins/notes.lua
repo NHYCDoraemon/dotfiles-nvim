@@ -33,16 +33,18 @@ return {
     },
   },
 
-  -- Typora-style in-buffer markdown rendering — hides ALL markup symbols and
-  -- shows only the rendered visual. Toggle raw view with <leader>mt.
+  -- markview.nvim DISABLED for markdown — render-markdown.nvim (already loaded
+  -- as an Avante dependency) is now the primary markdown renderer with a more
+  -- elegant default. Keeping markview spec around but inactive in case we want
+  -- to re-enable it later. The `enabled = false` flag tells lazy.nvim to skip
+  -- loading the plugin.
   {
     "OXY2DEV/markview.nvim",
-    lazy = false,
+    enabled = false,
     ft = { "markdown", "Avante" },
     dependencies = { "nvim-tree/nvim-web-devicons" },
     keys = {
-      { "<leader>mt", "<cmd>Markview Toggle<cr>", desc = "Markdown: toggle Typora render", ft = "markdown" },
-      { "<leader>ms", "<cmd>Markview splitToggle<cr>", desc = "Markdown: toggle split render", ft = "markdown" },
+      { "<leader>mt", "<cmd>RenderMarkdown toggle<cr>", desc = "Markdown: toggle render", ft = "markdown" },
     },
     opts = {
       preview = {
@@ -117,9 +119,120 @@ return {
         },
         convert = {
           notify = true,
-          command = "magick",  -- ImageMagick (we already install graphviz which pulls magick on some setups)
+          command = "magick",
         },
       },
+    },
+  },
+
+  -- render-markdown.nvim — primary markdown renderer (Typora-esque).
+  -- Originally pulled in as an Avante dependency; here we override its opts
+  -- to give .md files a polished WYSIWYG-style render.
+  {
+    "MeanderingProgrammer/render-markdown.nvim",
+    ft = { "markdown", "Avante" },
+    opts = {
+      file_types = { "markdown", "Avante" },
+
+      -- Mode-aware rendering: render in normal/cmdline; reveal raw in insert.
+      render_modes = { "n", "c", "t" },
+      anti_conceal = { enabled = true },
+
+      heading = {
+        enabled = true,
+        sign = false,                          -- no gutter sign (cleaner left margin)
+        position = "overlay",
+        icons = { "󰉫 ", "󰉬 ", "󰉭 ", "󰉮 ", "󰉯 ", "󰉰 " },  -- subtle bullet icons
+        signs = { "󰫎 " },
+        width = "block",                       -- background fill the line
+        left_pad = 0,
+        right_pad = 4,                         -- tail breathing room
+        min_width = 0,
+        border = false,
+        above = " ",
+        below = " ",
+        backgrounds = {
+          "RenderMarkdownH1Bg",
+          "RenderMarkdownH2Bg",
+          "RenderMarkdownH3Bg",
+          "RenderMarkdownH4Bg",
+          "RenderMarkdownH5Bg",
+          "RenderMarkdownH6Bg",
+        },
+      },
+
+      paragraph = { enabled = true, left_margin = 0 },
+
+      code = {
+        enabled = true,
+        sign = false,
+        style = "full",                         -- show language label + bg
+        position = "left",
+        language_pad = 0,
+        language_name = true,
+        disable_background = { "diff" },
+        width = "block",
+        left_pad = 2,
+        right_pad = 2,
+        min_width = 60,
+        border = "thick",                       -- soft block border
+        above = " ",
+        below = " ",
+        highlight_inline = "RenderMarkdownCodeInline",  -- inline `code` background
+      },
+
+      dash = { enabled = true, icon = "─", width = "full" },
+
+      bullet = {
+        enabled = true,
+        icons = { "●", "○", "◆", "◇" },
+        -- ordered_icons left at default — function signature varies between
+        -- render-markdown versions; defaults render "1." "2." etc. cleanly.
+        left_pad = 0,
+        right_pad = 1,
+      },
+
+      checkbox = {
+        enabled = true,
+        position = "overlay",
+        unchecked = { icon = "󰄱 ", highlight = "RenderMarkdownUnchecked" },
+        checked   = { icon = "󰱒 ", highlight = "RenderMarkdownChecked" },
+        custom = {
+          todo = { raw = "[-]", rendered = "󰥔 ", highlight = "DiagnosticInfo" },
+          important = { raw = "[!]", rendered = " ", highlight = "DiagnosticWarn" },
+        },
+      },
+
+      quote = {
+        enabled = true,
+        icon = "▎",
+        repeat_linebreak = true,                -- continue bar across paragraph wraps
+        highlight = "RenderMarkdownQuote",
+      },
+
+      pipe_table = {
+        enabled = true,
+        preset = "round",                       -- rounded corner cells
+        style  = "full",
+        cell   = "padded",
+      },
+
+      link = {
+        enabled = true,
+        image = "󰥶 ",                            -- ![]() prefix
+        email = "󰀓 ",
+        hyperlink = " ",
+        highlight = "RenderMarkdownLink",
+        wiki = { icon = "󱗖 ", body = function() return nil end, highlight = "RenderMarkdownWikiLink" },
+      },
+
+      sign = { enabled = false },               -- no left-margin sign noise
+    },
+
+    keys = {
+      { "<leader>mt", "<cmd>RenderMarkdown toggle<cr>", desc = "Markdown: toggle render", ft = "markdown" },
+      { "<leader>me", "<cmd>RenderMarkdown enable<cr>", desc = "Markdown: enable render",  ft = "markdown" },
+      { "<leader>md", "<cmd>RenderMarkdown disable<cr>", desc = "Markdown: disable render (raw)", ft = "markdown" },
     },
   },
 
