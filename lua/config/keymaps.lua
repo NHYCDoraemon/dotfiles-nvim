@@ -18,6 +18,15 @@ map("n",          "<D-d>", ":t.<CR>", { desc = "Duplicate line" })
 map("v",          "<D-d>", "y'>p", { desc = "Duplicate selection" })
 map("n",          "<D-BS>", "dd", { desc = "Delete line" })
 
+-- Save:
+--   <C-s>  works everywhere (any terminal, no Cmd forwarding needed)
+--   <D-s>  Mac / IDEA-style (Ghostty / Wezterm with Kitty Keyboard Protocol)
+--   Both work in normal AND insert mode — insert mode stays in insert after save.
+map({ "n", "v", "i" }, "<C-s>", "<cmd>silent! write<CR><Esc>", { desc = "Save file" })
+map({ "n", "v", "i" }, "<D-s>", "<cmd>silent! write<CR><Esc>", { desc = "Save file (Cmd+S)" })
+-- Save ALL open buffers
+map("n",                "<D-A-s>", "<cmd>silent! wall<CR>",      { desc = "Save all" })
+
 -- Comment line / block (uses LazyVim's Comment.nvim default).
 map({ "n", "v" }, "<D-/>", "gcc", { remap = true, desc = "Toggle line comment" })
 map({ "n", "v" }, "<D-A-/>", "gbc", { remap = true, desc = "Toggle block comment" })
