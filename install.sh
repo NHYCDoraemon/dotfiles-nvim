@@ -88,7 +88,7 @@ fi
 # 2. Brew packages
 # ============================================================================
 step "Required packages (formulae)"
-BREW_FORMULAE=(neovim ripgrep fd lazygit graphviz)
+BREW_FORMULAE=(neovim ripgrep fd lazygit graphviz imagemagick)
 for pkg in "${BREW_FORMULAE[@]}"; do
   if brew list --formula "$pkg" >/dev/null 2>&1; then
     ok "$pkg"
