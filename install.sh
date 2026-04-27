@@ -88,7 +88,7 @@ fi
 # 2. Brew packages
 # ============================================================================
 step "Required packages (formulae)"
-BREW_FORMULAE=(neovim ripgrep fd lazygit)
+BREW_FORMULAE=(neovim ripgrep fd lazygit graphviz)
 for pkg in "${BREW_FORMULAE[@]}"; do
   if brew list --formula "$pkg" >/dev/null 2>&1; then
     ok "$pkg"
@@ -143,6 +143,39 @@ done
 # ============================================================================
 # 4. Optional language toolchains
 # ============================================================================
+step "Go static-analysis CLIs (call-graph visualization)"
+if command -v go >/dev/null 2>&1; then
+  # Make sure GOPATH/bin is on PATH so go-installed CLIs are findable
+  GOBIN="$(go env GOPATH 2>/dev/null)/bin"
+  case ":$PATH:" in
+    *":$GOBIN:"*) ;;
+    *) export PATH="$GOBIN:$PATH" ;;
+  esac
+
+  for tool in "github.com/ofabry/go-callvis@latest" "github.com/loov/goda@latest"; do
+    name=$(basename "${tool%@*}")
+    if command -v "$name" >/dev/null 2>&1; then
+      ok "$name already installed"
+    else
+      info "installing $name..."
+      go install "$tool" || warn "$name install failed (skipping)"
+    fi
+  done
+
+  # Persist GOPATH/bin in rc files
+  for rc in "$HOME/.zshrc" "$HOME/.bashrc"; do
+    if [[ -f "$rc" ]] && ! grep -q 'GOPATH.*bin\|go env GOPATH' "$rc"; then
+      {
+        echo ''
+        echo '# Added by dotfiles-nvim installer — for go-callvis / goda'
+        echo 'export PATH="$(go env GOPATH)/bin:$PATH"'
+      } >> "$rc"
+    fi
+  done
+else
+  warn "go not found — skipping go-callvis / goda install. Re-run after installing Go."
+fi
+
 step "Optional language toolchains"
 for cmd in node python3; do
   if command -v "$cmd" >/dev/null 2>&1; then
