@@ -35,7 +35,7 @@ The script is **idempotent** — safe to re-run. It backs up any existing `~/.co
 | **IDEA keymap** | Full macOS keymap (`⌘O`/`⌘B`/`⇧F6`/`⌘1-9`/etc.) wired to picker/LSP equivalents — requires terminal that forwards Cmd via Kitty Keyboard Protocol (Ghostty / Wezterm) |
 | **Themes** | Catppuccin Mocha (default) · Kanagawa Wave — both with italic keywords/types/methods/comments |
 | **Animations** | `mini.animate` · `mini.indentscope` · `noice.nvim` (centered cmdline) · `smear-cursor.nvim` |
-| **AI** | `avante.nvim` (defaults to SiliconFlow's DeepSeek-V4-Flash; pluggable to Claude/GPT) |
+| **AI** | none (use terminal-native CLIs like `claude`, `codex`, `aider`, `gh copilot` — battle-tested, no nvim plugin to fight with) |
 | **Data tooling** | `vim-dadbod-ui` (DB browser) · `kulala.nvim` (HTTP client) |
 | **Git** | `neogit` · `diffview.nvim` · `octo.nvim` (PR review) · `git-conflict.nvim` · `lazygit` |
 | **Wiki / Notes** | `obsidian.nvim` (vault at `~/notes`) · `markview.nvim` (in-buffer markdown render) |
@@ -86,7 +86,7 @@ The script is **idempotent** — safe to re-run. It backs up any existing `~/.co
 | `<Space>z` | Zen Mode |
 | `<Space>ff` / `<Space>fg` | Find files / Find text |
 | `<Space>nn` / `<Space>nd` | New note / Daily note (Obsidian) |
-| `<Space>aa` | Avante AI ask |
+| `<Space>nn` | New note (Obsidian) |
 
 ### Editing power tools
 
@@ -105,26 +105,24 @@ The script is **idempotent** — safe to re-run. It backs up any existing `~/.co
 
 ---
 
-## AI assistant — switching providers
+## AI workflow — terminal CLIs
 
-Default is SiliconFlow with `deepseek-ai/DeepSeek-V4-Flash`. Set the env var:
+This config has **no AI plugin**. Inline AI plugins (Avante / CodeCompanion / etc.) all
+have rough edges in 2026 — provider quirks, deadlocked input boxes, nested splits that
+throw E36, missing reasoning streams. The pragmatic alternative: use **terminal-native AI
+CLIs** in a `:term` split or a separate Kitty/Ghostty pane. They are battle-tested and
+work with any provider:
 
-```bash
-export SILICONFLOW_API_KEY="sk-..."
-```
+| Tool | Use case |
+|---|---|
+| **`claude`** ([Claude Code](https://claude.com/claude-code)) | Anthropic's official agentic CLI — code edits, project-aware |
+| **`codex`** ([OpenAI Codex CLI](https://github.com/openai/codex)) | OpenAI's official CLI |
+| **`aider`** ([aider.chat](https://aider.chat)) | Open source, multi-provider, edits files in repo |
+| **`gh copilot`** | GitHub Copilot in CLI |
 
-To switch providers (e.g. Claude or OpenAI directly), edit `~/.config/nvim/lua/plugins/ai.lua`:
-
-```lua
-provider = "claude",
-providers = {
-  claude = {
-    endpoint = "https://api.anthropic.com",
-    model = "claude-sonnet-4-6",
-    api_key_name = "ANTHROPIC_API_KEY",
-  },
-},
-```
+Inside nvim, drop into a terminal: `:term` (or `<Space>ot` to dock at bottom via edgy).
+Run any of the above. Your env vars (`ANTHROPIC_API_KEY` / `OPENAI_API_KEY` / etc.)
+need to be in `~/.zshrc`.
 
 ---
 
@@ -166,7 +164,7 @@ rm -rf ~/.local/share/nvim ~/.local/state/nvim ~/.cache/nvim
 
 ## Credits
 
-Built on top of [LazyVim](https://www.lazyvim.org). Heavy lifting from `folke/snacks.nvim`, `folke/edgy.nvim`, `nvim-mini/mini.nvim` family, `Bekaboo/dropbar.nvim`, `Isrothy/neominimap.nvim`, and `yetone/avante.nvim`.
+Built on top of [LazyVim](https://www.lazyvim.org). Heavy lifting from `folke/snacks.nvim`, `folke/edgy.nvim`, `nvim-mini/mini.nvim` family, `Bekaboo/dropbar.nvim`, `Isrothy/neominimap.nvim`, and `MeanderingProgrammer/render-markdown.nvim`.
 
 Inspired by IntelliJ IDEA's New UI (2023.1+).
 

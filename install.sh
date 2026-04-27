@@ -360,11 +360,11 @@ ${BOLD}Three terminals for three use cases:${NC}
   Open one of them, then run: ${BOLD}nvim${NC}
   From dashboard, press [f] to find files or [c] to edit config.
 
-${BOLD}AI assistant (Avante):${NC}
+${BOLD}AI workflow:${NC}
 
-  Add to ~/.zshrc and re-source:
-    ${BOLD}export SILICONFLOW_API_KEY="sk-..."${NC}
-  Or override the provider in ${BOLD}lua/plugins/ai.lua${NC} (e.g. switch to Claude direct).
+  No nvim AI plugin (intentional — they're flaky in 2026). Use terminal CLIs:
+    ${BOLD}claude${NC} (Claude Code) · ${BOLD}codex${NC} (OpenAI) · ${BOLD}aider${NC} · ${BOLD}gh copilot${NC}
+  Drop into a terminal split with ${BOLD}:term${NC} or ${BOLD}<Space>ot${NC}.
 
 ${BOLD}Java users:${NC}
 
@@ -381,7 +381,7 @@ ${BOLD}Useful shortcuts to try right away:${NC}
   ${BOLD}<Space>ff${NC}  Find file        ${BOLD}<Space>fg${NC}  Live grep
   ${BOLD}<Space>e${NC}   File explorer   ${BOLD}<Space>oo${NC}  Structure (Outline)
   ${BOLD}<Space>z${NC}   Zen mode        ${BOLD}<Space>P${NC}   Switch project + session
-  ${BOLD}<Space>aa${NC}  Avante AI       ${BOLD}<Space>mp${NC}  Markdown browser preview
+  ${BOLD}<Space>nn${NC}  New note         ${BOLD}<Space>mp${NC}  Markdown browser preview
   ${BOLD}<Space>st${NC}  TODOs (project) ${BOLD}<Space>uf${NC}  Pick font (Neovide live)
 
 ${BOLD}Update later:${NC}
