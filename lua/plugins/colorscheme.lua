@@ -71,7 +71,6 @@ return {
       transparent = false,
       dimInactive = false,
       terminalColors = true,
-      commentStyle  = { italic = true },
       -- Match IDEA: italic on keywords/comments, no bold anywhere by default.
       commentStyle  = { italic = true },
       keywordStyle  = { italic = true },
