@@ -34,9 +34,24 @@ return {
   --   3. Click nodes to navigate; pan/zoom for the whole project
   --
   -- Requires: go-callvis, goda, graphviz (dot). Installed by install.sh.
+  --
+  -- All commands resolve the Go module root by walking up from the current
+  -- buffer until a go.mod is found, so they work regardless of nvim's cwd.
   {
     "olexsmir/gopher.nvim",
     optional = true,
+    init = function()
+      -- Find Go module root by walking up from the current buffer's directory
+      -- until a go.mod file is encountered. Returns the directory containing
+      -- go.mod, or nil if none is found.
+      _G.__find_go_root = function()
+        local file = vim.api.nvim_buf_get_name(0)
+        local start = (file ~= "") and vim.fn.fnamemodify(file, ":p:h") or vim.fn.getcwd()
+        local found = vim.fs.find({ "go.mod" }, { upward = true, path = start })
+        if #found > 0 then return vim.fn.fnamemodify(found[1], ":h") end
+        return nil
+      end
+    end,
     keys = {
       -- Full project call graph from main(): every function, every call edge,
       -- color-coded by package. Spawns go-callvis in HTTP server mode and opens
@@ -47,16 +62,20 @@ return {
       {
         "<leader>cgv",
         function()
-          local cwd = vim.fn.getcwd()
+          local root = _G.__find_go_root()
+          if not root then
+            vim.notify("go-callvis: no go.mod found in any parent of current file", vim.log.levels.ERROR)
+            return
+          end
           local args = { "go-callvis", "-nostd", "-group", "pkg,type", "-http", ":7878", "./..." }
           _G.__go_callvis_job = _G.__go_callvis_job or {}
-          if _G.__go_callvis_job.pid and vim.fn.jobwait({ _G.__go_callvis_job.id }, 0)[1] == -1 then
+          if _G.__go_callvis_job.pid and _G.__go_callvis_job.id and vim.fn.jobwait({ _G.__go_callvis_job.id }, 0)[1] == -1 then
             vim.notify("go-callvis already running — reopening browser at http://localhost:7878", vim.log.levels.INFO)
             vim.fn.system("open http://localhost:7878")
             return
           end
           _G.__go_callvis_job.id = vim.fn.jobstart(args, {
-            cwd = cwd,
+            cwd = root,
             on_stdout = function(_, data)
               for _, line in ipairs(data) do
                 if line:match("http serving at") then
@@ -87,16 +106,20 @@ return {
       {
         "<leader>cgV",
         function()
+          local root = _G.__find_go_root()
+          if not root then
+            vim.notify("go-callvis: no go.mod found in any parent of current file", vim.log.levels.ERROR)
+            return
+          end
           local pkg_dir = vim.fn.expand("%:p:h")
-          local cwd = vim.fn.getcwd()
-          local rel = pkg_dir:sub(#cwd + 2)  -- strip cwd prefix + slash
+          local rel = pkg_dir:sub(#root + 2)  -- strip root prefix + slash
           if rel == "" then rel = "." end
           local args = { "go-callvis", "-nostd", "-focus", rel, "-http", ":7878", "./..." }
           if _G.__go_callvis_job and _G.__go_callvis_job.id and vim.fn.jobwait({ _G.__go_callvis_job.id }, 0)[1] == -1 then
             vim.fn.jobstop(_G.__go_callvis_job.id)
           end
           _G.__go_callvis_job = { id = vim.fn.jobstart(args, {
-            cwd = cwd,
+            cwd = root,
             on_stdout = function(_, data)
               for _, line in ipairs(data) do
                 if line:match("http serving at") then
@@ -135,7 +158,12 @@ return {
       {
         "<leader>cgg",
         function()
-          vim.cmd("vsplit | term go mod graph | head -200")
+          local root = _G.__find_go_root()
+          if not root then
+            vim.notify("no go.mod in any parent — open a file inside a Go module", vim.log.levels.ERROR)
+            return
+          end
+          vim.cmd("vsplit | term cd " .. vim.fn.shellescape(root) .. " && go mod graph | head -200")
         end,
         desc = "Go: module dependency graph",
         ft = "go",
@@ -145,7 +173,12 @@ return {
       {
         "<leader>cgT",
         function()
-          vim.cmd("vsplit | term goda tree ./...")
+          local root = _G.__find_go_root()
+          if not root then
+            vim.notify("no go.mod in any parent — open a file inside a Go module", vim.log.levels.ERROR)
+            return
+          end
+          vim.cmd("vsplit | term cd " .. vim.fn.shellescape(root) .. " && goda tree ./...")
         end,
         desc = "Go: goda tree (package deps)",
         ft = "go",
@@ -155,9 +188,14 @@ return {
       {
         "<leader>cgR",
         function()
+          local root = _G.__find_go_root()
+          if not root then
+            vim.notify("no go.mod in any parent — open a file inside a Go module", vim.log.levels.ERROR)
+            return
+          end
           local pkg = vim.fn.input("Package to reach: ")
           if pkg == "" then return end
-          vim.cmd("vsplit | term goda reach ./... " .. vim.fn.shellescape(pkg))
+          vim.cmd("vsplit | term cd " .. vim.fn.shellescape(root) .. " && goda reach ./... " .. vim.fn.shellescape(pkg))
         end,
         desc = "Go: goda reach (who imports package?)",
         ft = "go",
