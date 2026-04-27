@@ -1,3 +1,13 @@
+-- Avante.nvim — AI assistant.
+--
+-- Provider strategy: use Avante's built-in `openai` provider directly with
+-- a SiliconFlow endpoint override. Cleaner than `__inherited_from = "openai"`
+-- with custom name — avoids edge cases in provider resolution.
+--
+-- Tool-calling is DISABLED (`disable_tools = true`) at the provider level
+-- because DeepSeek via SiliconFlow doesn't reliably implement OpenAI's
+-- function-calling spec; agentic mode tries tool calls → response parsing
+-- hangs → prompt_input deadlocks.
 return {
   {
     "yetone/avante.nvim",
@@ -22,20 +32,16 @@ return {
       },
     },
     opts = {
-      provider = "siliconflow",
-      -- DeepSeek via SiliconFlow doesn't reliably implement OpenAI tool-calling,
-      -- so default `agentic` mode hangs / shows empty UI. Force legacy chat mode.
-      mode = "legacy",
+      provider = "openai",
       providers = {
-        siliconflow = {
-          __inherited_from = "openai",
+        openai = {
+          endpoint     = "https://api.siliconflow.cn/v1",
+          model        = "deepseek-ai/DeepSeek-V4-Flash",
           api_key_name = "SILICONFLOW_API_KEY",
-          endpoint = "https://api.siliconflow.cn/v1",
-          model = "deepseek-ai/DeepSeek-V4-Flash",
-          disable_tools = true,  -- explicitly skip tool-use; legacy chat only
+          disable_tools = true,  -- DeepSeek tool-call format isn't OpenAI-spec — turn off
           extra_request_body = {
             temperature = 0,
-            max_tokens = 8192,
+            max_tokens  = 8192,
           },
         },
       },
@@ -47,20 +53,16 @@ return {
         support_paste_from_clipboard = true,
       },
       windows = {
-        -- 35% was too narrow — Avante's sidebar internally creates a
-        -- selected_code_container sub-split, and on smaller terminal /
-        -- Neovide windows the resulting math fell below E36 threshold.
-        -- 50% gives reliable room; reduce later if you want more code area.
-        width = 50,
+        width = 50,  -- prevents E36 'not enough room' from selected_code_container
         sidebar_header = { rounded = true, align = "center" },
-        ask = { floating = true, start_insert = true, border = "rounded" },
+        ask  = { floating = true, start_insert = true, border = "rounded" },
         edit = { border = "rounded", start_insert = true },
       },
       mappings = {
-        ask    = "<leader>aa",
-        edit   = "<leader>ae",
+        ask     = "<leader>aa",
+        edit    = "<leader>ae",
         refresh = "<leader>ar",
-        toggle = { default = "<leader>at" },
+        toggle  = { default = "<leader>at" },
       },
     },
   },
