@@ -130,6 +130,45 @@ return {
     },
   },
 
+  -- Browser-based markdown preview — rock-solid mermaid / math / table rendering
+  -- via the browser's native mermaid.js. Use this when Neovide's inline image
+  -- pipeline misbehaves on a particular file, or for full-fidelity preview.
+  --
+  --   <leader>mp  → toggle preview (browser opens at localhost:8080-ish)
+  --   <leader>mP  → stop preview server
+  --
+  -- Auto-refreshes on save; mermaid blocks render natively in the browser.
+  {
+    "iamcco/markdown-preview.nvim",
+    cmd = { "MarkdownPreviewToggle", "MarkdownPreview", "MarkdownPreviewStop" },
+    ft = { "markdown" },
+    build = function() vim.fn["mkdp#util#install"]() end,
+    init = function()
+      vim.g.mkdp_filetypes        = { "markdown" }
+      vim.g.mkdp_auto_close       = 0       -- don't close the tab when leaving md
+      vim.g.mkdp_refresh_slow     = 0       -- update on every keystroke
+      vim.g.mkdp_combine_preview  = 1       -- one tab for all md files
+      vim.g.mkdp_theme            = "dark"  -- match our nvim theme
+      vim.g.mkdp_preview_options  = {
+        mkit = {},
+        katex = {},
+        uml = {},
+        maid = {},                          -- mermaid (default cdn)
+        disable_sync_scroll = 0,
+        sync_scroll_type = "middle",
+        hide_yaml_meta = 1,
+        sequence_diagrams = {},
+        flowchart_diagrams = {},
+        content_editable = false,
+        disable_filename = 0,
+      }
+    end,
+    keys = {
+      { "<leader>mp", "<cmd>MarkdownPreviewToggle<cr>", desc = "Markdown: browser preview toggle", ft = "markdown" },
+      { "<leader>mP", "<cmd>MarkdownPreviewStop<cr>",   desc = "Markdown: stop preview server",    ft = "markdown" },
+    },
+  },
+
   -- render-markdown.nvim — primary markdown renderer (Typora-esque).
   -- Originally pulled in as an Avante dependency; here we override its opts
   -- to give .md files a polished WYSIWYG-style render.
