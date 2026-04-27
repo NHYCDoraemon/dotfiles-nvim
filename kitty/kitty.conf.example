@@ -1,0 +1,133 @@
+# Kitty configuration — mirrors ~/.config/ghostty/config 1:1
+# in terms of intent. Differences are only because Kitty's directive names
+# and value formats differ.
+#
+# This setup is paired with image.nvim + diagram.nvim in nvim — Kitty's
+# native graphics protocol is what makes inline mermaid / png rendering
+# actually work (vs flaky Ghostty / Neovide paths).
+
+# ============================================================
+# Font
+# ============================================================
+font_family       Maple Mono NF
+italic_font       auto
+bold_font         auto
+bold_italic_font  auto
+font_size         15.5
+disable_ligatures never
+font_features     +calt +liga
+adjust_line_height 110%
+
+# ============================================================
+# Window / chrome
+# ============================================================
+window_padding_width 8
+remember_window_size yes
+hide_window_decorations no
+macos_show_window_title_in window
+macos_option_as_alt   left
+macos_quit_when_last_window_closed yes
+macos_titlebar_color  background
+
+# Tab bar — only show when 2+ tabs (single-tab keeps chrome clean).
+tab_bar_min_tabs   2
+tab_bar_edge       bottom
+tab_bar_style      separator
+tab_separator      " │ "
+
+# ============================================================
+# Behavior
+# ============================================================
+copy_on_select          no
+strip_trailing_spaces   smart
+enable_audio_bell       no
+visual_bell_duration    0.0
+shell_integration       enabled
+allow_remote_control    yes
+
+# Cursor — subtle blink + short trail (Kitty 0.45+ has cursor_trail).
+cursor_blink_interval      0.5
+cursor_stop_blinking_after 5.0
+cursor_trail               3
+
+# ============================================================
+# Theme — Catppuccin Mocha (works well with rose-pine in nvim,
+# the editor renders its own colors over the terminal)
+# ============================================================
+foreground            #cdd6f4
+background            #1e1e2e
+selection_foreground  #1e1e2e
+selection_background  #f5e0dc
+cursor                #f5e0dc
+cursor_text_color     #1e1e2e
+url_color             #f5e0dc
+
+active_border_color   #b4befe
+inactive_border_color #6c7086
+bell_border_color     #f9e2af
+
+active_tab_foreground   #11111b
+active_tab_background   #cba6f7
+active_tab_font_style   bold-italic
+inactive_tab_foreground #cdd6f4
+inactive_tab_background #181825
+inactive_tab_font_style normal
+
+# 16 ANSI palette — Catppuccin Mocha
+color0  #45475a
+color8  #585b70
+color1  #f38ba8
+color9  #f38ba8
+color2  #a6e3a1
+color10 #a6e3a1
+color3  #f9e2af
+color11 #f9e2af
+color4  #89b4fa
+color12 #89b4fa
+color5  #f5c2e7
+color13 #f5c2e7
+color6  #94e2d5
+color14 #94e2d5
+color7  #bac2de
+color15 #a6adc8
+
+# ============================================================
+# Keybindings
+# ============================================================
+# Fullscreen — same as Ghostty's super+enter / super+ctrl+f.
+map cmd+enter      toggle_fullscreen
+map cmd+ctrl+f     toggle_fullscreen
+
+# Free up ⌘+letter so nvim sees them as <D-x> via kitty keyboard protocol.
+# Kitty's defaults intercept ⌘W/T/N/F/etc. — unmap so they pass through.
+map cmd+w  no_op
+map cmd+t  no_op
+map cmd+n  no_op
+map cmd+r  no_op
+map cmd+d  no_op
+map cmd+e  no_op
+map cmd+l  no_op
+map cmd+k  no_op
+map cmd+f  no_op
+map cmd+b  no_op
+map cmd+u  no_op
+map cmd+p  no_op
+map cmd+j  no_op
+map cmd+g  no_op
+map cmd+o  no_op
+map cmd+y  no_op
+map cmd+1  no_op
+map cmd+2  no_op
+map cmd+3  no_op
+map cmd+4  no_op
+map cmd+5  no_op
+map cmd+6  no_op
+map cmd+7  no_op
+map cmd+8  no_op
+map cmd+9  no_op
+
+# Keep useful Kitty shortcuts that don't collide:
+#   ⌘+ / ⌘= / ⌘-     font size up/down
+#   ⌘0               reset font size
+#   ⌘C / ⌘V          system clipboard copy/paste
+#   ⌘Q               quit Kitty (system standard)

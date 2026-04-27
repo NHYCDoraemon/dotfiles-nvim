@@ -107,8 +107,9 @@ BREW_CASKS=(
   font-geist-mono-nerd-font
   font-commit-mono-nerd-font
   font-monaspace-nerd-font
-  ghostty
-  neovide
+  kitty           # primary terminal — image.nvim works reliably here
+  ghostty         # alternative; image rendering flaky
+  neovide         # GUI nvim option
 )
 for cask in "${BREW_CASKS[@]}"; do
   if brew list --cask "$cask" >/dev/null 2>&1; then
@@ -250,9 +251,22 @@ for d in "$HOME/.local/share/nvim" "$HOME/.local/state/nvim" "$HOME/.cache/nvim"
 done
 
 # ============================================================================
-# 6. Ghostty config (optional)
+# 6. Terminal configs (Kitty primary, Ghostty optional)
 # ============================================================================
-step "Ghostty config (optional)"
+step "Kitty config (primary terminal)"
+KITTY_CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/kitty"
+if [[ -f "$NVIM_CONFIG/kitty/kitty.conf.example" ]]; then
+  if [[ -f "$KITTY_CONFIG/kitty.conf" ]]; then
+    info "existing Kitty config found — keeping yours."
+    info "  reference: $NVIM_CONFIG/kitty/kitty.conf.example"
+  else
+    mkdir -p "$KITTY_CONFIG"
+    cp "$NVIM_CONFIG/kitty/kitty.conf.example" "$KITTY_CONFIG/kitty.conf"
+    ok "Kitty config installed at $KITTY_CONFIG/kitty.conf"
+  fi
+fi
+
+step "Ghostty config (alternative terminal)"
 if [[ -f "$NVIM_CONFIG/ghostty/config.example" ]]; then
   if [[ -f "$GHOSTTY_CONFIG/config" ]]; then
     info "existing Ghostty config found — keeping yours."
@@ -262,8 +276,6 @@ if [[ -f "$NVIM_CONFIG/ghostty/config.example" ]]; then
     cp "$NVIM_CONFIG/ghostty/config.example" "$GHOSTTY_CONFIG/config"
     ok "Ghostty config installed at $GHOSTTY_CONFIG/config"
   fi
-else
-  warn "ghostty/config.example not found in repo (skipping)"
 fi
 
 # ============================================================================
