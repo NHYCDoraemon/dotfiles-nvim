@@ -72,7 +72,11 @@ opt.timeoutlen = 600
 -- ============================================================================
 if vim.g.neovide then
   -- Font: same family + size as Ghostty config so the visual is consistent.
-  vim.o.guifont = "Maple Mono NF:h15.5,JetBrainsMono Nerd Font:h15.5"
+  -- Single family (no comma fallback) — Neovide's guifont parser sometimes
+  -- treats the whole comma-separated string as one missing font name and
+  -- falls back to the system default. Maple Mono NF already includes all
+  -- Nerd Font icon glyphs, so a fallback chain isn't needed.
+  vim.o.guifont = "Maple Mono NF:h15.5"
 
   -- Window chrome
   vim.g.neovide_padding_top    = 8
