@@ -48,28 +48,20 @@ return {
               end
               if vim.fn.filereadable(out_path) ~= 1 then return end
 
-              -- Display strategy depends on environment:
-              --   * Neovide: pixel-renderer can show the PNG inline via vsplit.
-              --   * Ghostty / terminal: hand off to macOS Preview.app via `open`.
-              --     (Vim's binary-buffer view is useless for actual viewing,
-              --      and Ghostty's kitty-graphics handshake is finicky.)
-              if vim.g.neovide then
-                local existing = _G.__mermaid_preview[buf]
-                if existing and vim.api.nvim_win_is_valid(existing) then
-                  vim.api.nvim_win_call(existing, function()
-                    vim.cmd("edit! " .. vim.fn.fnameescape(out_path))
-                  end)
-                else
-                  vim.cmd("vsplit " .. vim.fn.fnameescape(out_path))
-                  _G.__mermaid_preview[buf] = vim.api.nvim_get_current_win()
-                  vim.cmd("wincmd p")
-                end
-                vim.notify("Mermaid rendered → preview split (Neovide)", vim.log.levels.INFO)
+              -- Open the PNG in a side split. image.nvim's `hijack_file_patterns`
+              -- intercepts .png buffers and renders them as images in-place.
+              -- Reuse the same split on subsequent renders so we don't stack windows.
+              local existing = _G.__mermaid_preview[buf]
+              if existing and vim.api.nvim_win_is_valid(existing) then
+                vim.api.nvim_win_call(existing, function()
+                  vim.cmd("edit! " .. vim.fn.fnameescape(out_path))
+                end)
               else
-                -- macOS native: opens in Preview.app, refreshes if already open.
-                vim.fn.jobstart({ "open", out_path }, { detach = true })
-                vim.notify("Mermaid rendered → opened in Preview.app", vim.log.levels.INFO)
+                vim.cmd("vsplit " .. vim.fn.fnameescape(out_path))
+                _G.__mermaid_preview[buf] = vim.api.nvim_get_current_win()
+                vim.cmd("wincmd p")  -- jump back to source so user keeps editing
               end
+              vim.notify("Mermaid rendered → preview split", vim.log.levels.INFO)
             end)
           end,
         })
