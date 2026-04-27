@@ -23,12 +23,16 @@ return {
     },
     opts = {
       provider = "siliconflow",
+      -- DeepSeek via SiliconFlow doesn't reliably implement OpenAI tool-calling,
+      -- so default `agentic` mode hangs / shows empty UI. Force legacy chat mode.
+      mode = "legacy",
       providers = {
         siliconflow = {
           __inherited_from = "openai",
           api_key_name = "SILICONFLOW_API_KEY",
           endpoint = "https://api.siliconflow.cn/v1",
           model = "deepseek-ai/DeepSeek-V4-Flash",
+          disable_tools = true,  -- explicitly skip tool-use; legacy chat only
           extra_request_body = {
             temperature = 0,
             max_tokens = 8192,
