@@ -101,6 +101,45 @@ if vim.g.neovide then
   vim.g.neovide_cursor_animate_in_insert_mode = true
   vim.g.neovide_cursor_smooth_blink         = true
 
+  -- Cursor particle effect — pixie-dust trail behind cursor when moving.
+  -- Modes: "" (off) | "railgun" | "torpedo" | "pixiedust" | "sonicboom"
+  --        | "ripple" | "wireframe"
+  -- `pixiedust` is elegant + not distracting; cycle others via <leader>uV.
+  vim.g.neovide_cursor_vfx_mode             = "pixiedust"
+  vim.g.neovide_cursor_vfx_particle_density = 12.0
+  vim.g.neovide_cursor_vfx_particle_speed   = 16.0
+  vim.g.neovide_cursor_vfx_particle_lifetime = 1.5
+  vim.g.neovide_cursor_vfx_opacity          = 200.0
+
+  -- Floating windows: rounded corners + soft drop shadow (IDE-style depth).
+  vim.g.neovide_floating_corner_radius      = 0.5
+  vim.g.neovide_floating_shadow             = true
+  vim.g.neovide_floating_z_height           = 10
+  vim.g.neovide_light_angle_degrees         = 45
+  vim.g.neovide_light_radius                = 5
+
   -- Smooth scroll (Neovide's renderer makes this flicker-free).
   vim.g.neovide_scroll_animation_length     = 0.2
+  -- Window position animation (when nvim moves/resizes splits).
+  vim.g.neovide_position_animation_length   = 0.15
+
+  -- Refresh rate — match ProMotion (120Hz on M-series MacBook Pro / Studio
+  -- Display Pro). Falls back fine on 60Hz panels. Lower idle rate saves
+  -- battery when nothing is changing.
+  vim.g.neovide_refresh_rate                = 120
+  vim.g.neovide_refresh_rate_idle           = 30
+
+  -- macOS-only: window background vibrancy ("blur the desktop behind us").
+  vim.g.neovide_window_blurred              = true
+
+  -- Quality-of-life polish.
+  vim.g.neovide_hide_mouse_when_typing      = true
+  vim.g.neovide_confirm_quit                = true
+  vim.g.neovide_theme                       = "auto"  -- follow macOS dark/light
+
+  -- Text rendering: subtle gamma + contrast tweaks for sharper glyphs on
+  -- retina displays (defaults are conservative; 0.5 contrast gives strokes
+  -- a touch more weight without going bold).
+  vim.g.neovide_text_gamma                  = 0.0
+  vim.g.neovide_text_contrast               = 0.5
 end

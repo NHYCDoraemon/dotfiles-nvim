@@ -294,5 +294,38 @@ map("n", "<leader>uf", function()
   end)
 end, { desc = "Font: pick (live in Neovide, copy-snippet in terminal)" })
 
+-- ============================================================
+-- (13) NEOVIDE CURSOR VFX PICKER (Neovide only)
+-- ============================================================
+-- Cycle through the 7 cursor particle effects to find one you like.
+-- Effect changes apply instantly; pick "" (none) to turn it off.
+local VFX_MODES = {
+  { mode = "pixiedust",  note = "sparkly trail (current — elegant)" },
+  { mode = "ripple",     note = "water ripple (subtle)" },
+  { mode = "wireframe",  note = "geometric wireframe" },
+  { mode = "railgun",    note = "energy beam shot" },
+  { mode = "torpedo",    note = "torpedo trail" },
+  { mode = "sonicboom",  note = "sonic boom blast" },
+  { mode = "",           note = "none (clean, no particles)" },
+}
+
+map("n", "<leader>uV", function()
+  if not vim.g.neovide then
+    vim.notify("Cursor VFX requires Neovide (terminal can't render particles).", vim.log.levels.WARN)
+    return
+  end
+  vim.ui.select(VFX_MODES, {
+    prompt = "Cursor VFX (live preview):",
+    format_item = function(v)
+      local label = (v.mode == "" and "<none>") or v.mode
+      return string.format("%-12s  %s", label, v.note)
+    end,
+  }, function(choice)
+    if not choice then return end
+    vim.g.neovide_cursor_vfx_mode = choice.mode
+    vim.notify("Cursor VFX → " .. (choice.mode == "" and "<none>" or choice.mode), vim.log.levels.INFO)
+  end)
+end, { desc = "Neovide: pick cursor VFX mode" })
+
 -- Remove a few LazyVim defaults that conflict with our IDEA mappings.
 del("n", "<leader>l") -- avoid clash with <D-l>
