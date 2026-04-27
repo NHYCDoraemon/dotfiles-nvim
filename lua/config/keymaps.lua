@@ -229,10 +229,17 @@ map("n", "<leader>nT", "<cmd>ObsidianToggleCheckbox<CR>", { desc = "Toggle check
 -- ============================================================
 -- (10) AVANTE (AI)
 -- ============================================================
-map({ "n", "v" }, "<leader>aa", function()
+-- Without selection by default — Avante's selected_code_container split is
+-- created only when there's a visual selection, and on smaller windows that
+-- inner split throws E36 (not enough room). Visual mode keeps selection.
+map("n", "<leader>aa", function()
+  local ok, api = pcall(require, "avante.api")
+  if ok then api.ask({ without_selection = true }) end
+end, { desc = "Avante: ask (no selection)" })
+map("v", "<leader>aa", function()
   local ok, api = pcall(require, "avante.api")
   if ok then api.ask() end
-end, { desc = "Avante: ask" })
+end, { desc = "Avante: ask (with selection)" })
 map("v", "<leader>ae", function()
   local ok, api = pcall(require, "avante.api")
   if ok then api.edit() end
