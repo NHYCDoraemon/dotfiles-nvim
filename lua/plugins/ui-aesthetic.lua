@@ -120,17 +120,19 @@ return {
     },
   },
 
-  -- Cursor motion smear/trail.
+  -- Cursor motion smear/trail — DISABLED.
+  --
+  -- smear-cursor renders the trail using floating windows; in multi-window
+  -- layouts (explorer / outline / dap-ui open) its position math leaks the
+  -- trail into the wrong window, showing as flicker in side panels while
+  -- the cursor is moving in the editor. Terminal grid-cell rendering can't
+  -- reliably contain free-floating animations.
+  --
+  -- For real GUI-level cursor smoothness, run Neovide instead (native pixel
+  -- rendering handles this perfectly with `cursor_animation_length` etc.).
   {
     "sphamba/smear-cursor.nvim",
-    event = "VeryLazy",
-    opts = {
-      cursor_color = "none",
-      stiffness = 0.7,
-      trailing_stiffness = 0.55,
-      distance_stop_animating = 0.5,
-      hide_target_hack = false,
-    },
+    enabled = false,
   },
 
   -- Color value preview (#ff00ff swatches).
