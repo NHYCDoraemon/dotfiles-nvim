@@ -242,5 +242,21 @@ map("n", "<leader>ar", function()
   if ok then api.refresh() end
 end, { desc = "Avante: refresh" })
 
+-- ============================================================
+-- (11) THEME TOGGLE
+-- ============================================================
+-- Quick day/night swap between Catppuccin Mocha (dark) and Catppuccin Latte (light).
+-- Both flavors share the same plugin → no extra install, integrations identical.
+map("n", "<leader>uL", function()
+  local current = vim.g.colors_name or ""
+  if current:match("latte") then
+    vim.cmd("colorscheme catppuccin-mocha")
+    vim.notify("Theme: Catppuccin Mocha (dark)", vim.log.levels.INFO)
+  else
+    vim.cmd("colorscheme catppuccin-latte")
+    vim.notify("Theme: Catppuccin Latte (light)", vim.log.levels.INFO)
+  end
+end, { desc = "Theme: toggle dark / light" })
+
 -- Remove a few LazyVim defaults that conflict with our IDEA mappings.
 del("n", "<leader>l") -- avoid clash with <D-l>
