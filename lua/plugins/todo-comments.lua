@@ -6,10 +6,44 @@
 --   * DEPRECATED / 已废弃
 --   * Chinese equivalents for the standard set: 待办 修复 优化 注意
 --   * Pattern supports both ASCII `:` and Chinese full-width `：`
+-- Scope <leader>st / <leader>sT to the current project's git root instead of
+-- nvim's cwd. Default behavior searches getcwd() which is often the home
+-- directory or some unrelated path → user sees TODOs from LazyVim source,
+-- other projects, or worse.
+local function project_root()
+  local file = vim.api.nvim_buf_get_name(0)
+  local start = (file ~= "") and vim.fn.fnamemodify(file, ":p:h") or vim.fn.getcwd()
+  local found = vim.fs.find(
+    { ".git", "go.mod", "package.json", "Cargo.toml", "pom.xml", "build.gradle", "pyproject.toml" },
+    { upward = true, path = start }
+  )
+  if #found > 0 then return vim.fn.fnamemodify(found[1], ":h") end
+  return vim.fn.getcwd()
+end
+
 return {
   {
     "folke/todo-comments.nvim",
     event = { "BufReadPost", "BufNewFile", "BufWritePre" },
+    keys = {
+      -- Override LazyVim's default <leader>st — scope to current project root.
+      {
+        "<leader>st",
+        function() Snacks.picker.todo_comments({ cwd = project_root() }) end,
+        desc = "Todo (current project)",
+      },
+      {
+        "<leader>sT",
+        function() Snacks.picker.todo_comments({ cwd = project_root(), keywords = { "TODO", "FIX", "FIXME" } }) end,
+        desc = "Todo/Fix/Fixme (current project)",
+      },
+      -- Buffer-only TODO list (loclist) — useful for "what's left in this file?"
+      {
+        "<leader>sl",
+        function() vim.cmd("TodoLocList") end,
+        desc = "Todo (current file only)",
+      },
+    },
     opts = {
       keywords = {
         FIX = {
