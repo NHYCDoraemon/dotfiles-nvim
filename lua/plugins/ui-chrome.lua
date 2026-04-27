@@ -66,7 +66,10 @@ return {
         end,
       },
       icons = {
-        kinds = { use_devicons = true },
+        kinds = {
+          file_icon  = function(path) return require("nvim-web-devicons").get_icon(path) or "" end,
+          folder_icon = "",
+        },
         ui = { bar = { separator = "  ", extends = "…" } },
       },
       menu = {

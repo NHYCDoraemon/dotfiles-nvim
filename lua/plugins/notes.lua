@@ -280,28 +280,13 @@ return {
     },
   },
 
-  -- camelCase-aware spell check (disabled on markdown / wiki — too noisy on prose).
-  {
-    "davidmh/cspell.nvim",
-    dependencies = { "nvimtools/none-ls.nvim", "nvim-lua/plenary.nvim" },
-    event = "BufReadPost",
-    config = function()
-      local null_ls = require("null-ls")
-      local cspell = require("cspell")
-      null_ls.setup({
-        sources = {
-          cspell.diagnostics.with({
-            runtime_condition = function(params)
-              -- Skip cspell entirely on markdown buffers.
-              return params.ft ~= "markdown"
-            end,
-            diagnostics_postprocess = function(d) d.severity = vim.diagnostic.severity.HINT end,
-          }),
-          cspell.code_actions,
-        },
-      })
-    end,
-  },
+  -- cspell.nvim DISABLED — it depends on none-ls.nvim, but LazyVim has
+  -- moved formatting/linting to conform.nvim + nvim-lint and warns when
+  -- none-ls is loaded without the lazyvim.plugins.extras.lsp.none-ls extra.
+  -- We weren't getting much value from cspell (already off for markdown/wiki).
+  -- Remove this block entirely to clean up.
+  { "davidmh/cspell.nvim",  enabled = false },
+  { "nvimtools/none-ls.nvim", enabled = false },
 
   -- Silence markdown linters & LSP diagnostics on markdown / wiki files.
   -- Keeps marksman LSP attached for navigation/completion, just hides its diagnostics.

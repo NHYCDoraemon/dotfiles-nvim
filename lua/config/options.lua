@@ -105,7 +105,7 @@ if vim.g.neovide then
   vim.g.neovide_input_macos_option_key_is_meta = "only_left"
 
   -- Subtle transparency + floating-window blur (vibrancy effect).
-  vim.g.neovide_transparency = 0.96
+  vim.g.neovide_opacity = 0.96  -- renamed from neovide_transparency in newer Neovide
   vim.g.neovide_floating_blur_amount_x = 2.0
   vim.g.neovide_floating_blur_amount_y = 2.0
 

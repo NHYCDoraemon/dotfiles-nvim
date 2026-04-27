@@ -56,28 +56,31 @@ return {
 
   -- Mermaid / D2 / PlantUML inline rendering inside markdown.
   -- Requires `mmdc` (already installed via npm install -g @mermaid-js/mermaid-cli).
+  -- Uses `opts = function()` so the integration require()s execute AFTER the
+  -- plugin is loaded — calling them at spec-eval time fails with "module not found".
   {
     "3rd/diagram.nvim",
     dependencies = { "3rd/image.nvim" },
     ft = { "markdown", "mermaid" },
-    opts = {
-      events = {
-        render_buffer = { "InsertLeave", "BufWinEnter", "TextChanged" },
-        clear_buffer  = { "BufLeave" },
-      },
-      renderer_options = {
-        mermaid = {
-          background_color = "transparent",
-          theme = "dark",   -- matches rose-pine
-          scale = 2,        -- 2x for retina sharpness
+    opts = function()
+      return {
+        events = {
+          render_buffer = { "InsertLeave", "BufWinEnter", "TextChanged" },
+          clear_buffer  = { "BufLeave" },
         },
-        plantuml = { charset = "utf-8" },
-        d2       = { theme_id = 1, dark_theme_id = 200, scale = nil, layout = nil, sketch = false },
-      },
-      integrations = {
-        require("diagram.integrations.markdown"),
-        require("diagram.integrations.neorg"),
-      },
-    },
+        renderer_options = {
+          mermaid = {
+            background_color = "transparent",
+            theme = "dark",
+            scale = 2,
+          },
+          plantuml = { charset = "utf-8" },
+          d2       = { theme_id = 1, dark_theme_id = 200, scale = nil, layout = nil, sketch = false },
+        },
+        integrations = {
+          require("diagram.integrations.markdown"),
+        },
+      }
+    end,
   },
 }
