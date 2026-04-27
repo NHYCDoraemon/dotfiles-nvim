@@ -33,6 +33,14 @@ return {
     "Bekaboo/dropbar.nvim",
     event = "VeryLazy",
     dependencies = { "nvim-tree/nvim-web-devicons" },
+    keys = {
+      -- Interactive pick: each breadcrumb segment gets a letter label;
+      -- press the letter to open that segment's dropdown menu.
+      { "<leader>;", function() require("dropbar.api").pick() end, desc = "Breadcrumb: pick component" },
+      -- Step navigation within a context (function -> next sibling, etc.).
+      { "[c", function() require("dropbar.api").goto_context_start() end, desc = "Breadcrumb: goto context start" },
+      { "]c", function() require("dropbar.api").select_next_context() end, desc = "Breadcrumb: next context" },
+    },
     opts = {
       bar = {
         enable = function(buf, win)
