@@ -88,7 +88,26 @@ fi
 # 2. Brew packages
 # ============================================================================
 step "Required packages (formulae)"
-BREW_FORMULAE=(neovim ripgrep fd lazygit graphviz imagemagick plantuml)
+BREW_FORMULAE=(
+  # Core
+  neovim          # editor itself
+  ripgrep         # snacks.picker live grep
+  fd              # snacks.picker file finder
+  fzf             # general-purpose fuzzy finder (also used by some plugins)
+  bat             # cat with syntax-highlighted previews
+
+  # Git ecosystem
+  lazygit         # <leader>gg TUI
+  gh              # octo.nvim PR review needs `gh auth login`
+
+  # Diagram rendering
+  graphviz        # `dot` for go-callvis SVG output
+  imagemagick     # `magick` for image.nvim conversions
+  plantuml        # .puml file rendering (lang-plantuml.lua)
+
+  # JSON formatting (kulala.nvim HTTP client uses jq for response pretty-print)
+  jq
+)
 for pkg in "${BREW_FORMULAE[@]}"; do
   if brew list --formula "$pkg" >/dev/null 2>&1; then
     ok "$pkg"
@@ -119,6 +138,23 @@ for cask in "${BREW_CASKS[@]}"; do
     brew install --cask "$cask" || warn "$cask install reported issues — verify manually if needed"
   fi
 done
+
+# Verify the primary nvim font is discoverable by macOS / Kitty / Neovide.
+# Cask installs put fonts in ~/Library/Fonts/ which macOS auto-detects, but
+# occasionally the system font cache lags. fc-match confirms detection works.
+step "Font registration check"
+if command -v fc-match >/dev/null 2>&1; then
+  for fam in "Maple Mono NF" "JetBrainsMono Nerd Font"; do
+    resolved=$(fc-match -f '%{family}' "$fam" 2>/dev/null || true)
+    if [[ "$resolved" == *"$fam"* ]] || [[ "$fam" == *"$resolved"* ]]; then
+      ok "font registered: $fam"
+    else
+      warn "font '$fam' not resolving (got '$resolved'). Open Font Book to verify or relog macOS."
+    fi
+  done
+else
+  info "fontconfig (fc-match) not installed — skipping font verification."
+fi
 
 # ============================================================================
 # 3. Rust toolchain (rust-analyzer)
@@ -315,23 +351,43 @@ fi
 printf "\n${GREEN}${BOLD}✓  Installation complete${NC}\n\n"
 
 cat <<EOF
-Next steps:
+${BOLD}Three terminals for three use cases:${NC}
 
-  1. Open ${BOLD}Ghostty${NC} (NOT Apple Terminal — Cmd-keys need Kitty Keyboard Protocol)
+  ${BOLD}Kitty${NC}     — primary, image.nvim renders mermaid/PNG inline
+  ${BOLD}Neovide${NC}   — GUI nvim, gorgeous fonts/animations (no inline images yet)
+  ${BOLD}Ghostty${NC}   — alternate terminal, Cmd-key passthrough
 
-  2. Run: ${BOLD}nvim${NC}
+  Open one of them, then run: ${BOLD}nvim${NC}
+  From dashboard, press [f] to find files or [c] to edit config.
 
-  3. From the dashboard, press [f] to find files or [c] to edit config
+${BOLD}AI assistant (Avante):${NC}
 
-Optional:
+  Add to ~/.zshrc and re-source:
+    ${BOLD}export SILICONFLOW_API_KEY="sk-..."${NC}
+  Or override the provider in ${BOLD}lua/plugins/ai.lua${NC} (e.g. switch to Claude direct).
 
-  • Set ${BOLD}\$SILICONFLOW_API_KEY${NC} (or override Avante provider) for AI assist:
-        export SILICONFLOW_API_KEY="sk-..."
+${BOLD}Java users:${NC}
 
-  • Add custom plugins under: ${BOLD}$NVIM_CONFIG/lua/plugins/${NC}
+  jdtls needs Java 21 to RUN, but can target older Java versions.
+  If 'java -version' is < 21, install:
+    ${BOLD}brew install --cask temurin@21 temurin@17${NC}
 
-  • Update later: re-run this installer, or:
-        cd $NVIM_CONFIG && git pull
+${BOLD}Octo (GitHub PR review):${NC}
 
-Repo: $REPO_URL
+  ${BOLD}gh auth login${NC}  ← one-time, then <leader>gpl shows PRs.
+
+${BOLD}Useful shortcuts to try right away:${NC}
+
+  ${BOLD}<Space>ff${NC}  Find file        ${BOLD}<Space>fg${NC}  Live grep
+  ${BOLD}<Space>e${NC}   File explorer   ${BOLD}<Space>oo${NC}  Structure (Outline)
+  ${BOLD}<Space>z${NC}   Zen mode        ${BOLD}<Space>P${NC}   Switch project + session
+  ${BOLD}<Space>aa${NC}  Avante AI       ${BOLD}<Space>mp${NC}  Markdown browser preview
+  ${BOLD}<Space>st${NC}  TODOs (project) ${BOLD}<Space>uf${NC}  Pick font (Neovide live)
+
+${BOLD}Update later:${NC}
+
+  Re-run this installer (idempotent), or:
+    ${BOLD}cd $NVIM_CONFIG && git pull && nvim --headless "+Lazy! sync" +qa${NC}
+
+Repo: ${BOLD}$REPO_URL${NC}
 EOF
