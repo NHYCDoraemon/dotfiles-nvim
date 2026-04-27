@@ -54,14 +54,18 @@ return {
     },
   },
 
-  -- Mermaid / D2 / PlantUML inline rendering inside markdown.
-  -- Requires `mmdc` (already installed via npm install -g @mermaid-js/mermaid-cli).
-  -- Uses `opts = function()` so the integration require()s execute AFTER the
-  -- plugin is loaded — calling them at spec-eval time fails with "module not found".
+  -- Mermaid / D2 / PlantUML inline rendering inside markdown — Neovide ONLY.
+  --
+  -- In terminal nvim (Ghostty), image.nvim's kitty-graphics path is unreliable:
+  -- it pops empty floating windows instead of rendering. Disabling diagram.nvim
+  -- there means mermaid blocks stay as plain code — cleaner failure mode.
+  -- For terminal users, <leader>mp opens the markdown in a browser preview
+  -- where mermaid.js handles rendering natively.
   {
     "3rd/diagram.nvim",
     dependencies = { "3rd/image.nvim" },
     ft = { "markdown", "mermaid" },
+    enabled = function() return vim.g.neovide ~= nil end,
     opts = function()
       return {
         events = {
