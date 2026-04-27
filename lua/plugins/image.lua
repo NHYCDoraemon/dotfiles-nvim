@@ -1,32 +1,29 @@
--- True in-editor image rendering — replaces Snacks.image's flaky Ghostty path.
+-- Image / diagram rendering.
 --
--- 3rd/image.nvim:
---   * Battle-tested kitty graphics protocol implementation that works in
---     Ghostty / Kitty / WezTerm / Neovide without protocol-detection drama.
---   * Auto-renders ![](path.png) in markdown buffers as you scroll past them.
---   * Auto-renders standalone .png / .jpg / .svg files when opened.
+-- Strategy by environment:
+--   * Neovide (GUI):      image.nvim + diagram.nvim → real inline pixel render.
+--   * Ghostty (terminal): both disabled → no fake popup. <leader>mp browser
+--     preview / Preview.app on .mmd / .puml are the working alternatives.
 --
--- 3rd/diagram.nvim:
---   * Watches markdown buffers for ```mermaid``` / ```d2``` / ```plantuml```
---     code blocks. Pipes each block through its CLI (mmdc / d2 / plantuml),
---     hands the resulting PNG to image.nvim, displays inline.
---   * No browser, no separate preview pane — diagrams render in place.
+-- The Neovide check happens via lazy.nvim's `enabled = function()` predicate
+-- which is evaluated at spec resolution time.
 return {
-  -- Disable Snacks.image — image.nvim takes over completely.
+  -- Always disable Snacks.image — produces kitty-protocol noise notifications
+  -- and conflicts with image.nvim when both try to render.
   {
     "folke/snacks.nvim",
     opts = { image = { enabled = false } },
   },
 
-  -- Image renderer (Kitty graphics protocol).
+  -- image.nvim — Neovide ONLY.
   {
     "3rd/image.nvim",
+    enabled = function() return vim.g.neovide ~= nil end,
     build = false,
     event = "VeryLazy",
     opts = {
-      backend = "kitty",        -- Ghostty supports kitty graphics protocol
-      processor = "magick_cli", -- shell out to `magick` (already installed)
-
+      backend = "kitty",
+      processor = "magick_cli",
       integrations = {
         markdown = {
           enabled = true,
@@ -36,36 +33,27 @@ return {
           floating_windows = false,
           filetypes = { "markdown", "vimwiki", "Avante" },
         },
-        neorg  = { enabled = false },
-        typst  = { enabled = false },
-        html   = { enabled = false },
-        css    = { enabled = false },
+        neorg = { enabled = false },
+        typst = { enabled = false },
+        html  = { enabled = false },
+        css   = { enabled = false },
       },
-
-      max_width                          = 100,
-      max_height                         = 30,
-      max_width_window_percentage        = nil,
-      max_height_window_percentage       = 60,
-      window_overlap_clear_enabled       = true,
-      window_overlap_clear_ft_ignore     = { "cmp_menu", "cmp_docs", "snacks_picker_list", "" },
-      editor_only_render_when_focused    = false,
-      tmux_show_only_in_active_window    = false,
-      hijack_file_patterns               = { "*.png", "*.jpg", "*.jpeg", "*.gif", "*.webp", "*.avif" },
+      max_width                       = 100,
+      max_height                      = 30,
+      max_height_window_percentage    = 60,
+      window_overlap_clear_enabled    = true,
+      window_overlap_clear_ft_ignore  = { "cmp_menu", "cmp_docs", "snacks_picker_list", "" },
+      editor_only_render_when_focused = false,
+      hijack_file_patterns            = { "*.png", "*.jpg", "*.jpeg", "*.gif", "*.webp", "*.avif" },
     },
   },
 
-  -- Mermaid / D2 / PlantUML inline rendering inside markdown — Neovide ONLY.
-  --
-  -- In terminal nvim (Ghostty), image.nvim's kitty-graphics path is unreliable:
-  -- it pops empty floating windows instead of rendering. Disabling diagram.nvim
-  -- there means mermaid blocks stay as plain code — cleaner failure mode.
-  -- For terminal users, <leader>mp opens the markdown in a browser preview
-  -- where mermaid.js handles rendering natively.
+  -- diagram.nvim — Neovide ONLY (renders ```mermaid``` blocks inline in markdown).
   {
     "3rd/diagram.nvim",
+    enabled = function() return vim.g.neovide ~= nil end,
     dependencies = { "3rd/image.nvim" },
     ft = { "markdown", "mermaid" },
-    enabled = function() return vim.g.neovide ~= nil end,
     opts = function()
       return {
         events = {
@@ -79,7 +67,7 @@ return {
             scale = 2,
           },
           plantuml = { charset = "utf-8" },
-          d2       = { theme_id = 1, dark_theme_id = 200, scale = nil, layout = nil, sketch = false },
+          d2       = { theme_id = 1, dark_theme_id = 200 },
         },
         integrations = {
           require("diagram.integrations.markdown"),
