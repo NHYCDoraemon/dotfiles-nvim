@@ -10,7 +10,18 @@ return {
       local lombok = vim.fn.expand("~/.local/share/nvim/mason/share/lombok/lombok.jar")
       opts.full_cmd = function(cmd_opts)
         local fname = vim.api.nvim_buf_get_name(0)
-        local root_dir = require("lazyvim.util.lsp").get_root_dir(fname) or vim.fn.getcwd()
+        -- LazyVim's `util.lsp.get_root_dir` was removed; use nvim 0.10+ native
+        -- `vim.fs.root()` to find the Java project root.
+        local root_dir = vim.fs.root(fname ~= "" and fname or 0, {
+          "pom.xml",
+          "build.gradle",
+          "build.gradle.kts",
+          "settings.gradle",
+          "settings.gradle.kts",
+          "mvnw",
+          "gradlew",
+          ".git",
+        }) or vim.fn.getcwd()
         local project_name = vim.fn.fnamemodify(root_dir, ":p:h:t")
         local cmd = vim.deepcopy(cmd_opts.cmd or { "jdtls" })
         table.insert(cmd, "--jvm-arg=-javaagent:" .. lombok)
