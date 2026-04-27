@@ -73,10 +73,12 @@ return {
         multiline = true,
         keyword = "wide",
         after = "fg",
-        pattern = [[.*<(KEYWORDS)\s*[:：]]],
+        -- Use level-1 long brackets `[=[...]=]` because the regex contains `]]`
+        -- which would prematurely close `[[...]]`.
+        pattern = [=[.*<(KEYWORDS)\s*[:：]]=],
       },
       search = {
-        pattern = [[\b(KEYWORDS)\s*[:：]]],
+        pattern = [=[\b(KEYWORDS)\s*[:：]]=],
       },
     },
   },
