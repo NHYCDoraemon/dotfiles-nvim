@@ -39,18 +39,44 @@ return {
     optional = true,
     keys = {
       -- Full project call graph from main(): every function, every call edge,
-      -- color-coded by package. Opens in browser via -http server.
+      -- color-coded by package. Spawns go-callvis in HTTP server mode and opens
+      -- the browser when the server is ready.
+      --
+      -- IMPORTANT: do NOT pass `-file` together with `-http` — `-file` switches
+      -- go-callvis to one-shot file mode and the HTTP server never starts.
       {
         "<leader>cgv",
         function()
           local cwd = vim.fn.getcwd()
-          local cmd = string.format(
-            "cd %s && go-callvis -nostd -group pkg,type -http=:7878 -file=callvis ./... &",
-            vim.fn.shellescape(cwd)
-          )
-          vim.fn.system(cmd)
-          vim.notify("go-callvis started at http://localhost:7878 — opening browser...", vim.log.levels.INFO)
-          vim.defer_fn(function() vim.fn.system("open http://localhost:7878") end, 1500)
+          local args = { "go-callvis", "-nostd", "-group", "pkg,type", "-http", ":7878", "./..." }
+          _G.__go_callvis_job = _G.__go_callvis_job or {}
+          if _G.__go_callvis_job.pid and vim.fn.jobwait({ _G.__go_callvis_job.id }, 0)[1] == -1 then
+            vim.notify("go-callvis already running — reopening browser at http://localhost:7878", vim.log.levels.INFO)
+            vim.fn.system("open http://localhost:7878")
+            return
+          end
+          _G.__go_callvis_job.id = vim.fn.jobstart(args, {
+            cwd = cwd,
+            on_stdout = function(_, data)
+              for _, line in ipairs(data) do
+                if line:match("http serving at") then
+                  vim.schedule(function() vim.fn.system("open http://localhost:7878") end)
+                end
+              end
+            end,
+            on_stderr = function(_, data)
+              local msg = table.concat(data, "\n"):gsub("\n+$", "")
+              if msg ~= "" then vim.schedule(function() vim.notify("go-callvis: " .. msg, vim.log.levels.WARN) end) end
+            end,
+            on_exit = function(_, code)
+              if code ~= 0 then
+                vim.schedule(function() vim.notify("go-callvis exited with code " .. code, vim.log.levels.ERROR) end)
+              end
+              _G.__go_callvis_job.id = nil
+            end,
+          })
+          _G.__go_callvis_job.pid = vim.fn.jobpid(_G.__go_callvis_job.id)
+          vim.notify("go-callvis starting (~10-30s for first analysis)...", vim.log.levels.INFO)
         end,
         desc = "Go: visualize full call graph (browser)",
         ft = "go",
@@ -61,19 +87,47 @@ return {
       {
         "<leader>cgV",
         function()
-          local pkg_path = vim.fn.expand("%:p:h")
+          local pkg_dir = vim.fn.expand("%:p:h")
           local cwd = vim.fn.getcwd()
-          local rel = vim.fn.fnamemodify(pkg_path, ":." .. cwd)
-          local cmd = string.format(
-            "cd %s && go-callvis -nostd -focus '%s' -http=:7878 -file=callvis-focus ./... &",
-            vim.fn.shellescape(cwd),
-            rel
-          )
-          vim.fn.system(cmd)
-          vim.notify("go-callvis (focused) → http://localhost:7878", vim.log.levels.INFO)
-          vim.defer_fn(function() vim.fn.system("open http://localhost:7878") end, 1500)
+          local rel = pkg_dir:sub(#cwd + 2)  -- strip cwd prefix + slash
+          if rel == "" then rel = "." end
+          local args = { "go-callvis", "-nostd", "-focus", rel, "-http", ":7878", "./..." }
+          if _G.__go_callvis_job and _G.__go_callvis_job.id and vim.fn.jobwait({ _G.__go_callvis_job.id }, 0)[1] == -1 then
+            vim.fn.jobstop(_G.__go_callvis_job.id)
+          end
+          _G.__go_callvis_job = { id = vim.fn.jobstart(args, {
+            cwd = cwd,
+            on_stdout = function(_, data)
+              for _, line in ipairs(data) do
+                if line:match("http serving at") then
+                  vim.schedule(function() vim.fn.system("open http://localhost:7878") end)
+                end
+              end
+            end,
+            on_stderr = function(_, data)
+              local msg = table.concat(data, "\n"):gsub("\n+$", "")
+              if msg ~= "" then vim.schedule(function() vim.notify("go-callvis: " .. msg, vim.log.levels.WARN) end) end
+            end,
+          }) }
+          vim.notify("go-callvis (focus=" .. rel .. ") starting...", vim.log.levels.INFO)
         end,
         desc = "Go: call graph focused on current package",
+        ft = "go",
+      },
+
+      -- Stop the running go-callvis HTTP server.
+      {
+        "<leader>cgx",
+        function()
+          if _G.__go_callvis_job and _G.__go_callvis_job.id then
+            vim.fn.jobstop(_G.__go_callvis_job.id)
+            _G.__go_callvis_job.id = nil
+            vim.notify("go-callvis stopped", vim.log.levels.INFO)
+          else
+            vim.notify("go-callvis not running", vim.log.levels.WARN)
+          end
+        end,
+        desc = "Go: stop go-callvis server",
         ft = "go",
       },
 
