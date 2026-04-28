@@ -96,4 +96,60 @@ return {
       },
     },
   },
+
+  -- ─── rose-pine 同温层补充（文艺/简约调性）────────────────────────
+  -- vague: 极柔极简，几乎是 rose-pine 的精神兄弟（更冷一点）。
+  {
+    "vague2k/vague.nvim",
+    lazy = true,
+    opts = {
+      transparent = false,
+      style = {
+        boolean        = "italic",
+        number         = "none",
+        float          = "none",
+        error          = "bold",
+        comments       = "italic",
+        conditionals   = "italic",
+        functions      = "none",
+        headings       = "bold",
+        operators      = "none",
+        strings        = "none",
+        variables      = "none",
+        keywords       = "italic",
+        keyword_return = "italic",
+        keywords_loop  = "italic",
+        keywords_label = "none",
+        keywords_exception = "none",
+        builtin_constants = "italic",
+        builtin_functions = "none",
+        builtin_types  = "none",
+        builtin_variables = "italic",
+      },
+    },
+  },
+
+  -- mellifluous: 复古暖调，纸质感，文艺。
+  {
+    "ramojus/mellifluous.nvim",
+    lazy = true,
+    dependencies = { "rktjmp/lush.nvim" },
+    opts = {
+      color_set = "mellifluous",  -- mellifluous | alduin | mountain | tender | kanagawa_dragon
+      styles = {
+        comments  = { italic = true },
+        conditionals = { italic = true },
+        keywords  = { italic = true },
+        types     = {},
+        functions = {},
+      },
+    },
+  },
+
+  -- flexoki: Are.na 出品的 Flexoki 调色板（纸 + 墨水美学）。
+  {
+    "kepano/flexoki-neovim",
+    name = "flexoki",
+    lazy = true,
+  },
 }

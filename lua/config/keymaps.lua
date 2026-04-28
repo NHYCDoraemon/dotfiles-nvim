@@ -252,12 +252,25 @@ end, { desc = "Theme: toggle dark / light (rose-pine)" })
 -- In terminal nvim the font is owned by the terminal — picker shows a notice
 -- with the line to paste into ~/.config/ghostty/config and reminds to restart.
 local FONTS = {
-  { family = "Maple Mono NF",            note = "current — modern, CJK-friendly, beautiful italic" },
-  { family = "VictorMono Nerd Font",     note = "elegant cursive italic — best with rose-pine" },
-  { family = "GeistMono Nerd Font",      note = "Vercel — clean, minimal, modern" },
-  { family = "CommitMono Nerd Font",     note = "ultra-readable, balanced spacing" },
-  { family = "MonaspiceNe Nerd Font",    note = "GitHub Monaspace Neon — geometric" },
-  { family = "JetBrainsMono Nerd Font",  note = "IDE standard — neutral, safe" },
+  -- ─── italic 大小写都连笔（你想要的）─────────────────────────────
+  { family = "VictorMono Nerd Font",     note = "★ Victor — italic 大小写**都**是花体连笔" },
+  { family = "Cascadia Code NF",         note = "★ Cascadia — italic 大小写都连笔（2204+ 新版）" },
+  -- ─── 整字符手写感（不分 regular/italic）─────────────────────────
+  { family = "Monaspace Radon NF",       note = "★ Monaspace Radon — 整字符手写感，文艺向" },
+  { family = "RecMonoCasual Nerd Font",  note = "★ Recursive Casual — 手写体最浓" },
+  -- ─── 半连笔（小写连大写不连）────────────────────────────────────
+  { family = "Maple Mono NF",            note = "Maple — italic 小写连，大写仅倾斜（current）" },
+  { family = "RecMonoSmCasual Nerd Font",note = "Recursive Semicasual — 微微手写，更克制" },
+  { family = "Monaspace Argon NF",       note = "Monaspace Argon — humanist 偏端正" },
+  -- ─── 重连字符号合并（=> ≠ → 等）─────────────────────────────────
+  { family = "Lilex Nerd Font",          note = "Lilex — 重 ligature，符号合并多（=> ≡ ≠）" },
+  { family = "Liga Comic Mono",          note = "Liga Comic Mono — 漫画字体（自动加行距，避免太挤）",
+    linespace = 4 },
+  -- ─── 端正派（无连笔）─────────────────────────────────────────────
+  { family = "GeistMono Nerd Font",      note = "Vercel Geist — minimal, modern" },
+  { family = "CommitMono Nerd Font",     note = "Commit — 极致清晰、平衡" },
+  { family = "MonaspiceNe Nerd Font",    note = "Monaspace Neon — geometric" },
+  { family = "JetBrainsMono Nerd Font",  note = "JetBrains — IDE 标准" },
 }
 
 map("n", "<leader>uf", function()
@@ -267,8 +280,17 @@ map("n", "<leader>uf", function()
   }, function(choice)
     if not choice then return end
     if vim.g.neovide then
-      vim.o.guifont = choice.family .. ":h15.5"
-      vim.notify("Font → " .. choice.family, vim.log.levels.INFO)
+      -- Per-font tuning: thick fonts (e.g. Liga Comic Mono) declare extra
+      -- linespace so they breathe; default is h15 / linespace 0.
+      local size = choice.size or 15
+      local ls   = choice.linespace or 0
+      vim.o.guifont   = choice.family .. ":h" .. size
+      vim.opt.linespace = ls
+      vim.notify(
+        ("Font → %s  (h%s, linespace=%d)"):format(choice.family, size, ls),
+        vim.log.levels.INFO,
+        { title = "guifont" }
+      )
     else
       local snippet = "font-family = " .. choice.family
       vim.fn.setreg("+", snippet)

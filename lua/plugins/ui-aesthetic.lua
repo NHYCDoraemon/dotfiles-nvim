@@ -145,4 +145,16 @@ return {
       enable_tailwind = true,
     },
   },
+
+  -- Snacks.dim: dim everything except the current scope (treesitter-aware).
+  -- Lighter than zen-mode + twilight: stays inline, just fades surrounding
+  -- code so the eye locks onto the function/block under cursor.
+  -- Toggle with <leader>uD; auto-on can be set in opts but we keep it manual.
+  {
+    "folke/snacks.nvim",
+    opts = { dim = { enabled = true } },
+    keys = {
+      { "<leader>uD", function() Snacks.dim() end, desc = "Toggle scope dim (snacks.dim)" },
+    },
+  },
 }

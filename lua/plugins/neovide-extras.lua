@@ -48,32 +48,46 @@ return {
   },
 
   -- 2. Right-side scrollbar with diagnostic / git / search markers.
+  --
+  -- Why satellite.nvim instead of nvim-scrollbar:
+  --   nvim-scrollbar's WinScrolled handler calls render() un-throttled and
+  --   re-creates all extmarks via clear-then-set, which (a) blocks the main
+  --   loop during fast scroll → Neovide animation stutter, (b) leaves a
+  --   visible empty frame between clear and set → flicker. satellite uses a
+  --   floating window pinned per-window and incremental redraws, which plays
+  --   nicely with Neovide's GPU smooth scroll.
   {
-    "petertriho/nvim-scrollbar",
+    "lewis6991/satellite.nvim",
     event = "BufReadPost",
     dependencies = { "lewis6991/gitsigns.nvim" },
     opts = {
-      handle = { color = "#403d52" },           -- rose-pine-friendly
+      current_only = false,   -- show the bar in every window, not just the focused one
+      winblend     = 50,
+      zindex       = 40,
       excluded_filetypes = {
-        "dropbar_menu", "snacks_dashboard", "lazy", "mason", "TelescopePrompt",
-        "neo-tree", "Outline", "trouble", "Avante", "AvanteInput",
+        "dropbar_menu", "snacks_dashboard", "snacks_layout_box",
+        "lazy", "mason", "TelescopePrompt",
+        "neo-tree", "Outline", "trouble", "Trouble",
+        "Avante", "AvanteInput", "AvanteSelectedFiles",
+        "noice", "help", "alpha", "dashboard",
       },
-      marks = {
-        Search = { color = "#f6c177" },
-        Error  = { color = "#eb6f92" },
-        Warn   = { color = "#f6c177" },
-        Info   = { color = "#9ccfd8" },
-        Hint   = { color = "#c4a7e7" },
-        Misc   = { color = "#c4a7e7" },
-        GitAdd = { color = "#31748f" },
-        GitChange = { color = "#9ccfd8" },
-        GitDelete = { color = "#eb6f92" },
+      width = 2,
+      handlers = {
+        cursor     = { enable = true, symbols = { "⎺", "⎻" } },
+        search     = { enable = true },
+        diagnostic = {
+          enable = true,
+          signs  = { "-", "=", "≡" },
+          min_severity = vim.diagnostic.severity.HINT,
+        },
+        gitsigns   = {
+          enable = true,
+          signs  = { add = "│", change = "│", delete = "-" },
+        },
+        marks      = { enable = true, show_builtins = false },
+        quickfix   = { enable = true },
       },
     },
-    config = function(_, opts)
-      require("scrollbar").setup(opts)
-      require("scrollbar.handlers.gitsigns").setup()
-    end,
   },
 
   -- 3. Highlight all occurrences of word under cursor.

@@ -89,13 +89,14 @@ if vim.g.neovide then
   -- Font: same family + size as Ghostty config so the visual is consistent.
   -- Single family (no comma fallback) — Neovide's guifont parser sometimes
   -- treats the whole comma-separated string as one missing font name and
-  -- falls back to the system default. Maple Mono NF already includes all
+  -- falls back to the system default. Lilex Nerd Font already includes all
   -- Nerd Font icon glyphs, so a fallback chain isn't needed.
-  vim.o.guifont = "Maple Mono NF:h15.5"
+  -- Browse / change interactively with `<leader>uf` (FONTS picker in keymaps.lua).
+  vim.o.guifont = "Lilex Nerd Font:h15"
   -- CJK characters use a dedicated font slot — `guifont` fallback chains are
   -- buggy in Neovide (see comment above), but `guifontwide` is a separate
   -- option built specifically for East Asian double-width chars.
-  vim.o.guifontwide = "Source Han Sans VF:h15.5"
+  vim.o.guifontwide = "Source Han Sans VF:h15"
 
   -- Window chrome
   vim.g.neovide_padding_top    = 8
@@ -109,13 +110,13 @@ if vim.g.neovide then
   vim.g.neovide_input_macos_option_key_is_meta = "only_left"
 
   -- Subtle transparency + floating-window blur (vibrancy effect).
-  vim.g.neovide_opacity = 0.96  -- renamed from neovide_transparency in newer Neovide
-  vim.g.neovide_floating_blur_amount_x = 2.0
-  vim.g.neovide_floating_blur_amount_y = 2.0
+  vim.g.neovide_opacity = 0.92  -- renamed from neovide_transparency in newer Neovide
+  vim.g.neovide_floating_blur_amount_x = 4.0
+  vim.g.neovide_floating_blur_amount_y = 4.0
 
   -- Smooth cursor: Neovide handles this natively at pixel level — no smear-cursor
   -- artifacts like in terminal mode.
-  vim.g.neovide_cursor_animation_length     = 0.07
+  vim.g.neovide_cursor_animation_length     = 0.05
   vim.g.neovide_cursor_trail_size           = 0.5
   vim.g.neovide_cursor_animate_in_insert_mode = true
   vim.g.neovide_cursor_smooth_blink         = true
@@ -131,7 +132,7 @@ if vim.g.neovide then
   vim.g.neovide_cursor_vfx_opacity          = 200.0
 
   -- Floating windows: rounded corners + soft drop shadow (IDE-style depth).
-  vim.g.neovide_floating_corner_radius      = 0.5
+  vim.g.neovide_floating_corner_radius      = 0.8
   vim.g.neovide_floating_shadow             = true
   vim.g.neovide_floating_z_height           = 10
   vim.g.neovide_light_angle_degrees         = 45
@@ -139,8 +140,13 @@ if vim.g.neovide then
 
   -- Smooth scroll (Neovide's renderer makes this flicker-free).
   vim.g.neovide_scroll_animation_length     = 0.2
+  -- WITHOUT this, Neovide's default `_far_lines = 1` skips animation for any
+  -- scroll movement of more than 1 line — so <C-d>, gg, G, search jumps and
+  -- mouse-wheel ticks all teleport instead of animating. 9999 = animate
+  -- everything regardless of distance.
+  vim.g.neovide_scroll_animation_far_lines  = 9999
   -- Window position animation (when nvim moves/resizes splits).
-  vim.g.neovide_position_animation_length   = 0.15
+  vim.g.neovide_position_animation_length   = 0.10
 
   -- Refresh rate — match ProMotion (120Hz on M-series MacBook Pro / Studio
   -- Display Pro). Falls back fine on 60Hz panels. Lower idle rate saves
