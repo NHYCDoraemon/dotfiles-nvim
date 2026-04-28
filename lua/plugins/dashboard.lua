@@ -24,7 +24,7 @@ return {
             { key = "n", desc = "New File",        action = ":ene | startinsert" },
             { key = "g", desc = "Find Text",       action = ":lua Snacks.dashboard.pick('live_grep')" },
             { key = "r", desc = "Recent Files",    action = ":lua Snacks.dashboard.pick('oldfiles')" },
-            { key = "p", desc = "Projects",        action = ":lua Snacks.picker.projects()" },
+            { key = "p", desc = "Projects",        action = ":lua Snacks.picker.projects({ dev = { '~/ideaProjects', '~/GolandProjects', '~/projects' } })" },
             { key = "c", desc = "Configuration",   action = ":lua Snacks.dashboard.pick('files', { cwd = vim.fn.stdpath('config') })" },
             { key = "s", desc = "Restore Session", section = "session" },
             { key = "z", desc = "Zen Mode",        action = ":ZenMode" },

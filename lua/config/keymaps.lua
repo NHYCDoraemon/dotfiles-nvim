@@ -377,5 +377,61 @@ map("n", "<leader>uI", function()
   print(table.concat(lines, "\n"))
 end, { desc = "Image: print debug info" })
 
+-- ============================================================
+-- (16) CD-TO-HERE + REFRESH LEFT TREE
+-- ============================================================
+-- In a `:term` buffer, the shell's `cd` does NOT propagate to Neovim's cwd —
+-- so `:Neotree dir=.` or `Snacks.explorer()` keeps showing the OLD project root.
+-- This keymap reads the shell's true cwd (via `lsof` on the term job pid),
+-- runs `:tcd` to it, then refreshes the left sidebar tree (Snacks.explorer,
+-- and neo-tree too if it happens to be open).
+--
+-- In a normal file buffer it falls back to the file's directory.
+local function resolve_target_dir()
+  if vim.bo.buftype == "terminal" then
+    local chan = vim.b.terminal_job_id
+    if chan then
+      local pid = vim.fn.jobpid(chan)
+      if pid and pid > 0 then
+        local out = vim.fn.systemlist({ "lsof", "-a", "-p", tostring(pid), "-d", "cwd", "-Fn" })
+        for _, line in ipairs(out) do
+          if line:sub(1, 1) == "n" then
+            local p = line:sub(2)
+            if p ~= "" and vim.fn.isdirectory(p) == 1 then return p end
+          end
+        end
+      end
+    end
+  end
+  local f = vim.api.nvim_buf_get_name(0)
+  if f ~= "" then
+    local d = vim.fn.fnamemodify(f, ":p:h")
+    if vim.fn.isdirectory(d) == 1 then return d end
+  end
+  return nil
+end
+
+local function neotree_is_open()
+  for _, win in ipairs(vim.api.nvim_list_wins()) do
+    local buf = vim.api.nvim_win_get_buf(win)
+    if vim.bo[buf].filetype == "neo-tree" then return true end
+  end
+  return false
+end
+
+map("n", "<leader>cw", function()
+  local target = resolve_target_dir()
+  if not target then
+    vim.notify("无法确定目标目录（不是 term 也不是文件 buffer）", vim.log.levels.WARN)
+    return
+  end
+  vim.cmd("tcd " .. vim.fn.fnameescape(target))
+  pcall(function() Snacks.explorer({ cwd = target }) end)
+  if neotree_is_open() then
+    pcall(vim.cmd, "Neotree dir=" .. vim.fn.fnameescape(target))
+  end
+  vim.notify("CWD → " .. target, vim.log.levels.INFO)
+end, { desc = "CD to here & refresh left tree" })
+
 -- Remove a few LazyVim defaults that conflict with our IDEA mappings.
 del("n", "<leader>l") -- avoid clash with <D-l>

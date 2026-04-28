@@ -92,6 +92,10 @@ if vim.g.neovide then
   -- falls back to the system default. Maple Mono NF already includes all
   -- Nerd Font icon glyphs, so a fallback chain isn't needed.
   vim.o.guifont = "Maple Mono NF:h15.5"
+  -- CJK characters use a dedicated font slot — `guifont` fallback chains are
+  -- buggy in Neovide (see comment above), but `guifontwide` is a separate
+  -- option built specifically for East Asian double-width chars.
+  vim.o.guifontwide = "Source Han Sans VF:h15.5"
 
   -- Window chrome
   vim.g.neovide_padding_top    = 8

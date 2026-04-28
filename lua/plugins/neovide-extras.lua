@@ -112,7 +112,7 @@ return {
     priority = 1001,        -- must load before any terminal opens
     opts = {
       window = { open = "alternate" },   -- new buffer in alternate window
-      callbacks = {
+      hooks = {
         should_block = function(argv)
           -- Block (= make the calling shell wait) for git editors only.
           return vim.tbl_contains(argv, "-b") or vim.tbl_contains(argv, "--block")

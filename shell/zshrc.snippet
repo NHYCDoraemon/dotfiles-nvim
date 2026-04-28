@@ -1,0 +1,16 @@
+# dotfiles-nvim — shell extras
+# Sourced from ~/.zshrc (added by install.sh).
+# Anything you'd want on a fresh machine after `git clone` should live here.
+
+# ----------------------------------------------------------------------------
+# Local secrets / machine-specific env vars (NOT committed).
+# Create from shell/.env.example. The file is .gitignored.
+# ----------------------------------------------------------------------------
+[ -f "${HOME}/.config/nvim/shell/.env" ] && . "${HOME}/.config/nvim/shell/.env"
+
+# ----------------------------------------------------------------------------
+# neovide: detach from the launching terminal so closing it doesn't kill the GUI.
+# Usage: `nvd`              → open neovide, free this shell
+#        `nvd path/to/file` → open file in neovide
+# ----------------------------------------------------------------------------
+nvd() { neovide --fork "$@" }

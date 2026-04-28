@@ -6,3 +6,6 @@ debug
 foo.*
 *.log
 data
+
+# Local secrets / machine-specific env (never commit)
+shell/.env

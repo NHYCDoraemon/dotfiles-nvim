@@ -3,7 +3,11 @@
 # dotfiles-nvim — one-line installer
 #
 # Usage:
-#   curl -fsSL https://raw.githubusercontent.com/NHYCDoraemon/dotfiles-nvim/main/install.sh | bash
+#   First install:
+#     curl -fsSL https://raw.githubusercontent.com/NHYCDoraemon/dotfiles-nvim/main/install.sh | bash
+#
+#   Upgrade an existing install (pull repo, sync plugins, reload kitty):
+#     ~/.config/nvim/install.sh --upgrade
 #
 # What it does (idempotent — safe to re-run):
 #   1. Installs Homebrew if missing
@@ -11,10 +15,11 @@
 #   3. Installs Rust toolchain (for rust-analyzer)
 #   4. Verifies Node / Python / Java (warns if missing)
 #   5. Backs up any existing ~/.config/nvim and clones this repo
-#   6. Optionally installs Ghostty config (from repo's ghostty/config.example)
-#   7. Runs first :Lazy sync to install plugins
-#   8. Installs LSPs / formatters / DAP via Mason
-#   9. Downloads Lombok agent jar for jdtls (Java)
+#   6. Symlinks Kitty config + appends shell-snippet source line to ~/.zshrc
+#   7. Optionally installs Ghostty config (from repo's ghostty/config.example)
+#   8. Runs first :Lazy sync to install plugins
+#   9. Installs LSPs / formatters / DAP via Mason
+#  10. Downloads Lombok agent jar for jdtls (Java)
 #
 set -euo pipefail
 
@@ -66,6 +71,45 @@ if [[ "$OSTYPE" != "darwin"* ]]; then
   err "This installer currently supports macOS only."
   err "Open an issue at $REPO_URL for Linux support."
   exit 1
+fi
+
+# ============================================================================
+# Upgrade mode: `./install.sh --upgrade`
+# Pulls latest, re-syncs plugins, reloads kitty if running. No brew/Mason re-run.
+# ============================================================================
+if [[ "${1:-}" == "--upgrade" || "${1:-}" == "-u" ]]; then
+  step "Upgrade mode"
+
+  if [[ ! -d "$NVIM_CONFIG/.git" ]]; then
+    err "$NVIM_CONFIG is not a git checkout — cannot upgrade. Re-run install.sh fresh."
+    exit 1
+  fi
+
+  info "git pull --ff-only"
+  ( cd "$NVIM_CONFIG" && git pull --ff-only )
+  ok "repo up to date"
+
+  info "Lazy sync plugins (headless)"
+  nvim --headless "+Lazy! sync" +qa 2>&1 | tail -3 || true
+  ok "plugins synced"
+
+  # Reload kitty if its main process is running (macOS path).
+  KITTY_PID="$(pgrep -f 'kitty.app/Contents/MacOS/kitty$' | head -1 || true)"
+  if [[ -n "$KITTY_PID" ]]; then
+    kill -SIGUSR1 "$KITTY_PID" && ok "Kitty (pid $KITTY_PID) reloaded via SIGUSR1"
+  else
+    info "Kitty not running — skip reload"
+  fi
+
+  cat <<EOF
+
+${GREEN}${BOLD}✓  Upgrade complete${NC}
+
+  Run ${BOLD}source ~/.zshrc${NC} in any open shell to pick up shell-snippet changes.
+  (install.sh runs in a child shell — it cannot source into your parent.)
+
+EOF
+  exit 0
 fi
 
 # ============================================================================
@@ -291,14 +335,43 @@ done
 # ============================================================================
 step "Kitty config (primary terminal)"
 KITTY_CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/kitty"
-if [[ -f "$NVIM_CONFIG/kitty/kitty.conf.example" ]]; then
-  if [[ -f "$KITTY_CONFIG/kitty.conf" ]]; then
-    info "existing Kitty config found — keeping yours."
-    info "  reference: $NVIM_CONFIG/kitty/kitty.conf.example"
+KITTY_SRC="$NVIM_CONFIG/kitty/kitty.conf"
+KITTY_DST="$KITTY_CONFIG/kitty.conf"
+if [[ -f "$KITTY_SRC" ]]; then
+  mkdir -p "$KITTY_CONFIG"
+  # We symlink rather than copy: the repo file is the single source of truth,
+  # so `git pull` (or --upgrade) propagates instantly with no copy step.
+  if [[ -L "$KITTY_DST" && "$(readlink "$KITTY_DST")" == "$KITTY_SRC" ]]; then
+    ok "Kitty config already symlinked → $KITTY_SRC"
   else
-    mkdir -p "$KITTY_CONFIG"
-    cp "$NVIM_CONFIG/kitty/kitty.conf.example" "$KITTY_CONFIG/kitty.conf"
-    ok "Kitty config installed at $KITTY_CONFIG/kitty.conf"
+    if [[ -e "$KITTY_DST" || -L "$KITTY_DST" ]]; then
+      backup="${KITTY_DST}.bak.$(date +%s)"
+      mv "$KITTY_DST" "$backup"
+      info "backed up existing Kitty config to $backup"
+    fi
+    ln -s "$KITTY_SRC" "$KITTY_DST"
+    ok "Kitty config symlinked: $KITTY_DST → $KITTY_SRC"
+  fi
+fi
+
+step "Shell snippet (nvd helper + .env loader)"
+SHELL_SNIPPET="$NVIM_CONFIG/shell/zshrc.snippet"
+ZSHRC="$HOME/.zshrc"
+SOURCE_LINE="[ -f \"\$HOME/.config/nvim/shell/zshrc.snippet\" ] && . \"\$HOME/.config/nvim/shell/zshrc.snippet\""
+if [[ -f "$SHELL_SNIPPET" ]]; then
+  if [[ -f "$ZSHRC" ]] && grep -Fq "shell/zshrc.snippet" "$ZSHRC"; then
+    ok "~/.zshrc already sources shell/zshrc.snippet"
+  else
+    {
+      printf '\n# dotfiles-nvim shell extras (added by install.sh)\n'
+      printf '%s\n' "$SOURCE_LINE"
+    } >> "$ZSHRC"
+    ok "appended source line to ~/.zshrc — run \`source ~/.zshrc\` to activate"
+  fi
+  # Seed shell/.env from .env.example if absent so users see the template.
+  ENV_LOCAL="$NVIM_CONFIG/shell/.env"
+  if [[ ! -f "$ENV_LOCAL" && -f "$NVIM_CONFIG/shell/.env.example" ]]; then
+    info "shell/.env not present — copy shell/.env.example and fill in values if you need any secrets"
   fi
 fi
 
