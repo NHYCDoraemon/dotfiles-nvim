@@ -92,11 +92,11 @@ if vim.g.neovide then
   -- falls back to the system default. Lilex Nerd Font already includes all
   -- Nerd Font icon glyphs, so a fallback chain isn't needed.
   -- Browse / change interactively with `<leader>uf` (FONTS picker in keymaps.lua).
-  vim.o.guifont = "Lilex Nerd Font:h15"
+  vim.o.guifont = "Lilex Nerd Font:h16"
   -- CJK characters use a dedicated font slot — `guifont` fallback chains are
   -- buggy in Neovide (see comment above), but `guifontwide` is a separate
   -- option built specifically for East Asian double-width chars.
-  vim.o.guifontwide = "Source Han Sans VF:h15"
+  vim.o.guifontwide = "Source Han Sans VF:h16"
 
   -- Window chrome
   vim.g.neovide_padding_top    = 8

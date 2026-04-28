@@ -281,8 +281,8 @@ map("n", "<leader>uf", function()
     if not choice then return end
     if vim.g.neovide then
       -- Per-font tuning: thick fonts (e.g. Liga Comic Mono) declare extra
-      -- linespace so they breathe; default is h15 / linespace 0.
-      local size = choice.size or 15
+      -- linespace so they breathe; default is h16 / linespace 0.
+      local size = choice.size or 16
       local ls   = choice.linespace or 0
       vim.o.guifont   = choice.family .. ":h" .. size
       vim.opt.linespace = ls
