@@ -23,8 +23,16 @@ return {
       default_engine = "google",
       engines = {
         google = {
+          -- Without GOOGLE_API_KEY/BEARER_TOKEN env vars pantran transparently
+          -- falls back to a web-scraping engine. That fallback reads its
+          -- defaults from `engines.google.fallback`, not from `engines.google`.
+          -- We set BOTH so the picker behaves the same regardless of API mode.
           default_source = "auto",
-          default_target = "zh-CN",   -- 默认翻译到中文（最常见诉求是英文→中文）
+          default_target = "zh-CN",
+          fallback = {
+            default_source = "auto",
+            default_target = "zh-CN",
+          },
         },
       },
       window = {
