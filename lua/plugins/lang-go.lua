@@ -63,14 +63,17 @@ return {
           return
         end
         local stamp = tostring(os.time())
-        local out_base = "/tmp/dora-callgraph-" .. stamp        -- without .svg
-        local out_svg  = out_base .. ".svg"
+        local out_base = "/tmp/dora-callgraph-" .. stamp        -- without extension
+        -- PDF (not SVG): Preview.app does NOT render SVG natively; PDF is its
+        -- home format. PDF is also vector, so zooming stays sharp on tiny
+        -- function names. Cmd-F still searches text inside the PDF.
+        local out_pdf = out_base .. ".pdf"
         local args = {
           "go-callvis",
           "-nostd",
           "-group", "pkg,type",
-          "-format", "svg",
-          "-graphviz",                -- run dot to actually render to SVG
+          "-format", "pdf",
+          "-graphviz",                -- run dot to actually render
           "-file", out_base,          -- go-callvis appends .<format>
         }
         if focus and focus ~= "" then
@@ -95,12 +98,15 @@ return {
                 vim.notify("go-callvis exited with code " .. code, vim.log.levels.ERROR)
                 return
               end
-              if vim.fn.filereadable(out_svg) ~= 1 then
-                vim.notify("go-callvis finished but " .. out_svg .. " not found", vim.log.levels.ERROR)
+              if vim.fn.filereadable(out_pdf) ~= 1 then
+                vim.notify("go-callvis finished but " .. out_pdf .. " not found", vim.log.levels.ERROR)
                 return
               end
-              vim.fn.jobstart({ "open", "-a", "Preview", out_svg }, { detach = true })
-              vim.notify("Call graph → Preview.app\n" .. out_svg, vim.log.levels.INFO)
+              -- Plain `open <pdf>` lets macOS pick the default PDF handler
+              -- (usually Preview). `-a Preview` was unreliable when the user
+              -- had a non-default PDF app set.
+              vim.fn.jobstart({ "open", out_pdf }, { detach = true })
+              vim.notify("Call graph → " .. out_pdf, vim.log.levels.INFO)
             end)
           end,
         })
