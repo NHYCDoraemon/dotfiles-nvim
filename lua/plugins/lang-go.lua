@@ -122,11 +122,29 @@ return {
                 vim.notify("go-callvis finished but " .. out_pdf .. " not found", vim.log.levels.ERROR)
                 return
               end
-              -- Plain `open <pdf>` lets macOS pick the default PDF handler
-              -- (usually Preview). `-a Preview` was unreliable when the user
-              -- had a non-default PDF app set.
+              -- Three artefacts on disk now:
+              --   <base>.gv   raw DOT source — best for feeding an LLM
+              --   <base>.pdf  rendered, opens in Preview.app for humans
+              --   <base>.svg  rendered SVG (we render from the .gv via `dot`)
+              -- We launch Preview with the PDF and ALSO kick off SVG render
+              -- in parallel — by the time you switch to the LLM tab, both
+              -- text formats are on disk.
+              local out_gv  = out_base .. ".gv"
+              local out_svg = out_base .. ".svg"
+              vim.fn.jobstart({ "dot", "-Tsvg", out_gv, "-o", out_svg }, { detach = true })
               vim.fn.jobstart({ "open", out_pdf }, { detach = true })
-              vim.notify("Call graph → " .. out_pdf, vim.log.levels.INFO)
+              -- Remember latest output for <leader>cgy / <leader>cgY one-key
+              -- yank-to-clipboard (defined in keys = {} below).
+              _G.__go_callvis_last = { gv = out_gv, svg = out_svg, pdf = out_pdf }
+              vim.notify(table.concat({
+                "Call graph rendered:",
+                "  PDF (view):  " .. out_pdf,
+                "  SVG (text):  " .. out_svg,
+                "  DOT (LLM):   " .. out_gv,
+                "",
+                "<leader>cgy = copy DOT to clipboard (paste into AI)",
+                "<leader>cgY = copy SVG to clipboard",
+              }, "\n"), vim.log.levels.INFO, { title = "go-callvis", timeout = 8000 })
             end)
           end,
         })
@@ -138,6 +156,56 @@ return {
         "<leader>cgv",
         function() _G.__go_callvis_render(nil) end,
         desc = "Go: full call graph → Preview.app",
+        ft = "go",
+      },
+
+      -- Yank the latest call-graph DOT source to the system clipboard.
+      -- Workflow: cgv/cgV → wait for "rendered" notify → cgy → paste into AI.
+      {
+        "<leader>cgy",
+        function()
+          local last = _G.__go_callvis_last
+          if not last or not last.gv or vim.fn.filereadable(last.gv) ~= 1 then
+            vim.notify("No call graph generated yet — press <leader>cgv or <leader>cgV first", vim.log.levels.WARN)
+            return
+          end
+          local fd = io.open(last.gv, "r")
+          if not fd then
+            vim.notify("Failed to read " .. last.gv, vim.log.levels.ERROR)
+            return
+          end
+          local content = fd:read("*a")
+          fd:close()
+          vim.fn.setreg("+", content)
+          vim.notify(("Copied DOT graph to clipboard (%d chars). Paste into your AI."):format(#content),
+            vim.log.levels.INFO, { title = "go-callvis" })
+        end,
+        desc = "Go: yank latest call-graph DOT to clipboard (for AI)",
+        ft = "go",
+      },
+
+      -- Same as cgy but copies SVG instead of DOT. Use this if your AI tool
+      -- prefers SVG (rare — most LLMs handle DOT better).
+      {
+        "<leader>cgY",
+        function()
+          local last = _G.__go_callvis_last
+          if not last or not last.svg or vim.fn.filereadable(last.svg) ~= 1 then
+            vim.notify("No SVG yet — wait a moment after cgv/cgV (dot needs ~1s to render)", vim.log.levels.WARN)
+            return
+          end
+          local fd = io.open(last.svg, "r")
+          if not fd then
+            vim.notify("Failed to read " .. last.svg, vim.log.levels.ERROR)
+            return
+          end
+          local content = fd:read("*a")
+          fd:close()
+          vim.fn.setreg("+", content)
+          vim.notify(("Copied SVG graph to clipboard (%d chars)."):format(#content),
+            vim.log.levels.INFO, { title = "go-callvis" })
+        end,
+        desc = "Go: yank latest call-graph SVG to clipboard",
         ft = "go",
       },
 
