@@ -24,6 +24,19 @@ map("n",          "<D-BS>", "dd", { desc = "Delete line" })
 map({ "n", "v" }, "j", "v:count == 0 ? 'gj' : 'j'", { expr = true, silent = true, desc = "Down (visual line)" })
 map({ "n", "v" }, "k", "v:count == 0 ? 'gk' : 'k'", { expr = true, silent = true, desc = "Up (visual line)" })
 
+-- Disable horizontal trackpad / mouse-wheel scrolling. macOS trackpads
+-- fire ScrollWheelLeft / ScrollWheelRight on slightly-diagonal swipes —
+-- when you intended a pure vertical scroll, the buffer suddenly drifts
+-- horizontally. Mapping them to <Nop> suppresses the misfire entirely.
+-- Vertical (ScrollWheelUp / Down) is untouched.
+for _, key in ipairs({
+  "<ScrollWheelLeft>", "<ScrollWheelRight>",
+  "<S-ScrollWheelLeft>", "<S-ScrollWheelRight>",
+  "<C-ScrollWheelLeft>", "<C-ScrollWheelRight>",
+}) do
+  map({ "n", "i", "v", "x", "o", "t" }, key, "<Nop>", { silent = true })
+end
+
 -- Save:
 --   <C-s>  works everywhere (any terminal, no Cmd forwarding needed)
 --   <D-s>  Mac / IDEA-style (Ghostty / Wezterm with Kitty Keyboard Protocol)
