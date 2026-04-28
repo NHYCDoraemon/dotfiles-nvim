@@ -82,11 +82,13 @@ return {
     },
   },
 
-  -- Set Rose Pine as default at LazyVim level.
+  -- Default colorscheme at LazyVim level.
+  -- dawnfox = nightfox 系列的暖色 light 变体，纸感+柔光，文艺向。
+  -- 切到其他主题用 <leader>uC（picker）；rose-pine main/dawn 切换用 <leader>uL。
   {
     "LazyVim/LazyVim",
     opts = {
-      colorscheme = "rose-pine",
+      colorscheme = "dawnfox",
     },
   },
 }

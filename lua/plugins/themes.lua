@@ -82,10 +82,14 @@ return {
     },
   },
 
-  -- Bonus: high-contrast modern (popular in 2025).
+  -- nightfox family (nightfox / dawnfox / dayfox / nordfox / terafox / carbonfox / duskfox).
+  -- dawnfox is set as the active default in colorscheme.lua, so this spec is
+  -- eager (lazy = false) with priority high enough to load before LazyVim's
+  -- colorscheme command runs.
   {
     "EdenEast/nightfox.nvim",
-    lazy = true,
+    lazy = false,
+    priority = 1000,
     opts = {
       options = {
         transparent = false,

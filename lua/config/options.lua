@@ -89,10 +89,13 @@ if vim.g.neovide then
   -- Font: same family + size as Ghostty config so the visual is consistent.
   -- Single family (no comma fallback) — Neovide's guifont parser sometimes
   -- treats the whole comma-separated string as one missing font name and
-  -- falls back to the system default. Lilex Nerd Font already includes all
-  -- Nerd Font icon glyphs, so a fallback chain isn't needed.
+  -- falls back to the system default. Liga Comic Mono includes all Nerd
+  -- Font icon glyphs, so a fallback chain isn't needed. Liga is thick, so
+  -- we add 4px linespace globally for breathing room (matches the per-font
+  -- override in the <leader>uf picker).
   -- Browse / change interactively with `<leader>uf` (FONTS picker in keymaps.lua).
-  vim.o.guifont = "Lilex Nerd Font:h16"
+  vim.o.guifont = "Liga Comic Mono:h16"
+  vim.opt.linespace = 4
   -- CJK characters use a dedicated font slot — `guifont` fallback chains are
   -- buggy in Neovide (see comment above), but `guifontwide` is a separate
   -- option built specifically for East Asian double-width chars.

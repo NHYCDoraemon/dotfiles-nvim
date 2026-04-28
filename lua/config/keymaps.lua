@@ -304,6 +304,36 @@ map("n", "<leader>uf", function()
 end, { desc = "Font: pick (live in Neovide, copy-snippet in terminal)" })
 
 -- ============================================================
+-- (12b) NEOVIDE FONT ZOOM (Cmd+= / Cmd+- / Cmd+0)
+-- ============================================================
+-- Neovide has a native scale factor (`vim.g.neovide_scale_factor`); 1.0 is
+-- the configured guifont size, anything else is a multiplier. We bind:
+--   Cmd+=  / Cmd++ → zoom in   (+10%)
+--   Cmd+-          → zoom out  (-10%)
+--   Cmd+0          → reset to 100%
+-- Bound in normal/insert/visual/terminal so it works mid-edit.
+-- In kitty (terminal nvim), the same keys are intercepted by kitty itself
+-- (see kitty.conf `change_font_size`), so this keymap only fires in Neovide.
+if vim.g.neovide then
+  local function scale(delta)
+    local s = (vim.g.neovide_scale_factor or 1.0) + delta
+    s = math.max(0.4, math.min(3.0, s))
+    vim.g.neovide_scale_factor = s
+    vim.notify(("Neovide scale → %d%%"):format(math.floor(s * 100 + 0.5)),
+      vim.log.levels.INFO, { title = "Zoom" })
+  end
+  for _, mode in ipairs({ "n", "i", "v", "t" }) do
+    map(mode, "<D-=>", function() scale( 0.10) end, { desc = "Zoom in" })
+    map(mode, "<D-+>", function() scale( 0.10) end, { desc = "Zoom in (Shift+=)" })
+    map(mode, "<D-->", function() scale(-0.10) end, { desc = "Zoom out" })
+    map(mode, "<D-0>", function()
+      vim.g.neovide_scale_factor = 1.0
+      vim.notify("Neovide scale → 100%", vim.log.levels.INFO, { title = "Zoom" })
+    end, { desc = "Reset zoom" })
+  end
+end
+
+-- ============================================================
 -- (13) NEOVIDE CURSOR VFX PICKER (Neovide only)
 -- ============================================================
 -- Cycle through the 7 cursor particle effects to find one you like.
