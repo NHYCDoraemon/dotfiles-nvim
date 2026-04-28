@@ -36,6 +36,11 @@ return {
       styles = {
         bold = false,
         italic = true,
+        -- transparency = false: rose-pine paints its signature warm cream
+        -- background. Combined with neovide_opacity = 0.85 and
+        -- window_blurred = true, that warm color is what you see —
+        -- a "warm tinted frosted glass" instead of the default white
+        -- macOS vibrancy material.
         transparency = false,
       },
     },

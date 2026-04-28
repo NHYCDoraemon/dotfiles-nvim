@@ -119,10 +119,20 @@ if vim.g.neovide then
   vim.g.neovide_input_use_logo = true
   vim.g.neovide_input_macos_option_key_is_meta = "only_left"
 
-  -- Subtle transparency + floating-window blur (vibrancy effect).
-  vim.g.neovide_opacity = 0.92  -- renamed from neovide_transparency in newer Neovide
-  vim.g.neovide_floating_blur_amount_x = 4.0
-  vim.g.neovide_floating_blur_amount_y = 4.0
+  -- Transparency + floating-window blur (vibrancy effect).
+  -- 0.75 is a "frosted-glass-visible" sweet spot: the colorscheme bg paints
+  -- on top of macOS vibrancy at 75% alpha, so vibrancy contributes ~25% —
+  -- enough to feel the frosted blur layer. Tune within this rough table:
+  --   0.92  hardly translucent — vibrancy invisible
+  --   0.85  warm color dominant — frosted barely there
+  --   0.75  sweet spot — warm color + visible frosted
+  --   0.65  text starts washing out into the background
+  -- TIP: stronger frosted feel comes from MORE CONTRAST between desktop
+  -- wallpaper and editor bg. Set macOS wallpaper to a darker image / paper
+  -- texture and the vibrancy frosted layer becomes much more obvious.
+  vim.g.neovide_opacity = 0.75  -- renamed from neovide_transparency in newer Neovide
+  vim.g.neovide_floating_blur_amount_x = 8.0
+  vim.g.neovide_floating_blur_amount_y = 8.0
 
   -- Smooth cursor: Neovide handles this natively at pixel level — no smear-cursor
   -- artifacts like in terminal mode.
@@ -164,7 +174,11 @@ if vim.g.neovide then
   vim.g.neovide_refresh_rate                = 120
   vim.g.neovide_refresh_rate_idle           = 30
 
-  -- macOS-only: window background vibrancy ("blur the desktop behind us").
+  -- macOS-only window vibrancy: NSVisualEffectView "frosted glass". Combined
+  -- with neovide_opacity (above) and a transparent colorscheme bg, this gives
+  -- the iOS / macOS Big Sur "vibrancy" feel — translucent + blurred so the
+  -- desktop wallpaper shows softly without distracting detail.
+  -- Set false ONLY if you want the desktop crisply visible through the editor.
   vim.g.neovide_window_blurred              = true
 
   -- Quality-of-life polish.
@@ -177,4 +191,5 @@ if vim.g.neovide then
   -- a touch more weight without going bold).
   vim.g.neovide_text_gamma                  = 0.0
   vim.g.neovide_text_contrast               = 0.5
+
 end
