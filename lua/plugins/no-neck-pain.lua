@@ -13,7 +13,36 @@
 -- the dead-end scratch buffer). After toggling, focus is forced back to
 -- the main code buffer so you don't land in the padding by accident.
 
+-- Detect "tree-like" side panels that confuse NNP's layout calculation.
+-- If any are open, close them first so NNP gets a clean single-window state
+-- before it inserts both padding buffers.
+local function close_sidebars()
+  local closed = {}
+  for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+    if vim.api.nvim_win_is_valid(win) then
+      local buf = vim.api.nvim_win_get_buf(win)
+      local ft = vim.bo[buf].filetype
+      if ft == "neo-tree" or ft == "snacks_layout_box" or ft == "Outline"
+         or ft == "trouble" or ft == "Trouble" or ft == "dapui_scopes" then
+        pcall(vim.api.nvim_win_close, win, false)
+        table.insert(closed, ft)
+      end
+    end
+  end
+  return closed
+end
+
 local function toggle_nnp()
+  -- On enable (about to flip from false → true), auto-close sidebars so the
+  -- main code buffer is the only window. NNP then adds true L/R padding.
+  if not vim.g._dora_nnp_active then
+    local closed = close_sidebars()
+    if #closed > 0 then
+      vim.notify("NNP: closed sidebars (" .. table.concat(closed, ", ") .. ") to keep layout symmetric",
+        vim.log.levels.INFO)
+    end
+  end
+
   vim.g._dora_nnp_active = not vim.g._dora_nnp_active
   vim.cmd("NoNeckPain")
   if vim.g._dora_nnp_active then
@@ -106,6 +135,11 @@ return {
           foldenable    = false,
           list          = false,
         },
+        -- Force both L and R padding to be enabled. Some NNP versions only
+        -- create one side if the layout already has a non-code window on
+        -- the other side. Explicit enabled = true here guards against that.
+        left  = { enabled = true },
+        right = { enabled = true },
       },
     },
   },
