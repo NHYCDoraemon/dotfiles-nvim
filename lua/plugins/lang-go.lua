@@ -142,8 +142,8 @@ return {
                 "  SVG (text):  " .. out_svg,
                 "  DOT (LLM):   " .. out_gv,
                 "",
+                "<leader>cgo = open DOT in float (read first)",
                 "<leader>cgy = copy DOT to clipboard (paste into AI)",
-                "<leader>cgY = copy SVG to clipboard",
               }, "\n"), vim.log.levels.INFO, { title = "go-callvis", timeout = 8000 })
             end)
           end,
@@ -156,6 +156,76 @@ return {
         "<leader>cgv",
         function() _G.__go_callvis_render(nil) end,
         desc = "Go: full call graph → Preview.app",
+        ft = "go",
+      },
+
+      -- Open the latest call-graph DOT file in a centered floating buffer.
+      -- Useful when you want to SEE the content before deciding what to send
+      -- to the AI (vs. <leader>cgy which copies blindly to clipboard).
+      -- Inside the float: q / <Esc> close it. Standard `y` / `:%y+` yanks.
+      {
+        "<leader>cgo",
+        function()
+          local last = _G.__go_callvis_last
+          local target = last and last.gv
+          if not target or vim.fn.filereadable(target) ~= 1 then
+            vim.notify("No graph yet — press <leader>cgv or <leader>cgV first", vim.log.levels.WARN)
+            return
+          end
+          local buf = vim.fn.bufadd(target)
+          vim.fn.bufload(buf)
+          vim.bo[buf].filetype = "dot"
+          local width  = math.floor(vim.o.columns * 0.85)
+          local height = math.floor(vim.o.lines * 0.85)
+          local win = vim.api.nvim_open_win(buf, true, {
+            relative = "editor",
+            width = width,
+            height = height,
+            row = math.floor((vim.o.lines - height) / 2),
+            col = math.floor((vim.o.columns - width) / 2),
+            border = "rounded",
+            title = " " .. vim.fn.fnamemodify(target, ":t") .. "  — q/Esc close, :%y+ yank-all ",
+            title_pos = "center",
+            style = "minimal",
+          })
+          vim.keymap.set("n", "q", "<cmd>close<cr>", { buffer = buf })
+          vim.keymap.set("n", "<Esc>", "<cmd>close<cr>", { buffer = buf })
+        end,
+        desc = "Go: open latest call-graph DOT in floating buffer",
+        ft = "go",
+      },
+
+      -- Same for SVG. SVG files can be huge — only useful if you really need
+      -- the rendered XML markup.
+      {
+        "<leader>cgO",
+        function()
+          local last = _G.__go_callvis_last
+          local target = last and last.svg
+          if not target or vim.fn.filereadable(target) ~= 1 then
+            vim.notify("No SVG yet — wait a moment after cgv/cgV (dot needs ~1s)", vim.log.levels.WARN)
+            return
+          end
+          local buf = vim.fn.bufadd(target)
+          vim.fn.bufload(buf)
+          vim.bo[buf].filetype = "xml"
+          local width  = math.floor(vim.o.columns * 0.85)
+          local height = math.floor(vim.o.lines * 0.85)
+          vim.api.nvim_open_win(buf, true, {
+            relative = "editor",
+            width = width,
+            height = height,
+            row = math.floor((vim.o.lines - height) / 2),
+            col = math.floor((vim.o.columns - width) / 2),
+            border = "rounded",
+            title = " " .. vim.fn.fnamemodify(target, ":t") .. "  — q/Esc close ",
+            title_pos = "center",
+            style = "minimal",
+          })
+          vim.keymap.set("n", "q", "<cmd>close<cr>", { buffer = buf })
+          vim.keymap.set("n", "<Esc>", "<cmd>close<cr>", { buffer = buf })
+        end,
+        desc = "Go: open latest call-graph SVG in floating buffer",
         ft = "go",
       },
 
