@@ -53,6 +53,20 @@ return {
         return nil
       end
 
+      -- Read the `module ...` line from go.mod at <root>/go.mod and return
+      -- the module path (e.g. "github.com/NHYCDoraemon/dora"), or nil.
+      _G.__read_go_module = function(root)
+        local fp = root .. "/go.mod"
+        local fd = io.open(fp, "r")
+        if not fd then return nil end
+        for line in fd:lines() do
+          local m = line:match("^%s*module%s+(%S+)")
+          if m then fd:close(); return m end
+        end
+        fd:close()
+        return nil
+      end
+
       -- One-shot go-callvis render: SVG to /tmp + open in Preview.app.
       -- macOS-native, no browser. Preview supports zoom / pan / Cmd-F search.
       -- Returns immediately; renders async and opens Preview on success.
@@ -127,7 +141,10 @@ return {
         ft = "go",
       },
 
-      -- Focused on the package of the current file.
+      -- Focused on the package of the current file. go-callvis -focus expects
+      -- a package NAME or full import path; relative paths fail with
+      -- "focus failed: <nil>". We compute the full import path from go.mod
+      -- module + relative dir.
       {
         "<leader>cgV",
         function()
@@ -136,10 +153,15 @@ return {
             vim.notify("go-callvis: no go.mod found in any parent of current file", vim.log.levels.ERROR)
             return
           end
+          local mod = _G.__read_go_module(root)
+          if not mod then
+            vim.notify("go-callvis: couldn't read `module` line from " .. root .. "/go.mod", vim.log.levels.ERROR)
+            return
+          end
           local pkg_dir = vim.fn.expand("%:p:h")
-          local rel = pkg_dir:sub(#root + 2)
-          if rel == "" then rel = "." end
-          _G.__go_callvis_render(rel)
+          local rel = pkg_dir:sub(#root + 2)            -- strip root + "/"
+          local import_path = (rel == "") and mod or (mod .. "/" .. rel)
+          _G.__go_callvis_render(import_path)
         end,
         desc = "Go: call graph focused on current package → Preview.app",
         ft = "go",
