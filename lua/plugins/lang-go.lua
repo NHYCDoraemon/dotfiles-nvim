@@ -75,6 +75,12 @@ return {
           "-format", "pdf",
           "-graphviz",                -- run dot to actually render
           "-file", out_base,          -- go-callvis appends .<format>
+          -- CHA (Class Hierarchy Analysis) sees interface calls. Default
+          -- "static" only catches concrete-receiver calls, which misses
+          -- ~all of dora's port-and-adapter graph (everything goes through
+          -- interfaces). Trade: CHA may over-connect (shows all possible
+          -- impls); RTA is more precise but slower. CHA is the sweet spot.
+          "-algo", "cha",
         }
         if focus and focus ~= "" then
           table.insert(args, "-focus")
