@@ -83,13 +83,11 @@ return {
   },
 
   -- nightfox family (nightfox / dawnfox / dayfox / nordfox / terafox / carbonfox / duskfox).
-  -- dawnfox is set as the active default in colorscheme.lua, so this spec is
-  -- eager (lazy = false) with priority high enough to load before LazyVim's
-  -- colorscheme command runs.
+  -- Lazy-loaded; the active default lives in colorscheme.lua. Picker
+  -- (<leader>uC) triggers load-on-pick.
   {
     "EdenEast/nightfox.nvim",
-    lazy = false,
-    priority = 1000,
+    lazy = true,
     opts = {
       options = {
         transparent = false,

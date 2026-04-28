@@ -79,14 +79,18 @@ return {
   },
 
   -- Sticky scope header at top of editor.
+  -- line_numbers = false: the line numbers shown there are the SOURCE line of
+  -- the scope's declaration (e.g. line 25 for `func Foo()` while you're at
+  -- line 200 inside it), which reads as "off" against the buffer's gutter.
+  -- Hiding them keeps the helpful scope hint without the apparent mismatch.
   {
     "nvim-treesitter/nvim-treesitter-context",
     event = "VeryLazy",
     opts = {
       enable = true,
-      max_lines = 3,
-      min_window_height = 20,
-      line_numbers = true,
+      max_lines = 5,
+      min_window_height = 30,
+      line_numbers = false,
       multiline_threshold = 1,
       trim_scope = "outer",
       -- "topline" = only redraw when viewport scrolls. Avoids flicker on intra-screen
