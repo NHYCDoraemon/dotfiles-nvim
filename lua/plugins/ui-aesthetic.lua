@@ -146,6 +146,24 @@ return {
     },
   },
 
+  -- Code-action picker with inline diff preview.
+  -- Replaces LazyVim's default <leader>ca. When you trigger a code action,
+  -- each candidate now shows the actual diff it would produce, so you can
+  -- pick by reading the change instead of by guessing from the action name.
+  -- Use <leader>cF for the bulk "fix all" path (defined in keymaps.lua).
+  {
+    "aznhe21/actions-preview.nvim",
+    event = "LspAttach",
+    opts = {
+      diff = { ctxlen = 3 },
+      backend = { "snacks", "telescope", "nui" },
+    },
+    keys = {
+      { "<leader>ca", function() require("actions-preview").code_actions() end,
+        mode = { "n", "v" }, desc = "Code action (with diff preview)" },
+    },
+  },
+
   -- Snacks.dim: dim everything except the current scope (treesitter-aware).
   -- Lighter than zen-mode + twilight: stays inline, just fades surrounding
   -- code so the eye locks onto the function/block under cursor.

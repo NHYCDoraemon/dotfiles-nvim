@@ -18,6 +18,12 @@ map("n",          "<D-d>", ":t.<CR>", { desc = "Duplicate line" })
 map("v",          "<D-d>", "y'>p", { desc = "Duplicate selection" })
 map("n",          "<D-BS>", "dd", { desc = "Delete line" })
 
+-- Soft-wrap navigation: j/k move by VISUAL line (so wrapped halves are
+-- separately reachable). When a count is given (5j) we fall back to logical
+-- lines so `5j` still means "down 5 file lines", matching muscle memory.
+map({ "n", "v" }, "j", "v:count == 0 ? 'gj' : 'j'", { expr = true, silent = true, desc = "Down (visual line)" })
+map({ "n", "v" }, "k", "v:count == 0 ? 'gk' : 'k'", { expr = true, silent = true, desc = "Up (visual line)" })
+
 -- Save:
 --   <C-s>  works everywhere (any terminal, no Cmd forwarding needed)
 --   <D-s>  Mac / IDEA-style (Ghostty / Wezterm with Kitty Keyboard Protocol)
@@ -484,6 +490,28 @@ map("n", "<leader>cw", function()
   end
   vim.notify("CWD → " .. target, vim.log.levels.INFO)
 end, { desc = "CD to here & refresh left tree" })
+
+-- ============================================================
+-- (18) LSP "FIX ALL" — auto-apply every source.fixAll / organizeImports
+-- ============================================================
+-- Different LSPs expose different "auto-fixable" action kinds:
+--   ESLint   → source.fixAll.eslint
+--   Ruff     → source.fixAll.ruff, source.organizeImports.ruff
+--   vtsls/TS → source.fixAll, source.fixAll.ts, source.organizeImports
+--   gopls    → source.organizeImports
+-- We filter by *prefix*, so every "auto-fix" / "organize imports" action
+-- across whatever LSPs are attached gets considered. With `apply = true`,
+-- if there is exactly one match it runs without prompt; with multiple
+-- matches you still get a small picker (only the fixable ones).
+map("n", "<leader>cF", function()
+  vim.lsp.buf.code_action({
+    apply = true,
+    filter = function(action)
+      local kind = action.kind or ""
+      return kind:match("^source%.fixAll") or kind:match("^source%.organizeImports")
+    end,
+  })
+end, { desc = "LSP: fix all + organize imports" })
 
 -- Remove a few LazyVim defaults that conflict with our IDEA mappings.
 del("n", "<leader>l") -- avoid clash with <D-l>

@@ -16,7 +16,14 @@ opt.number = true
 opt.relativenumber = true
 opt.cursorline = true
 opt.cursorlineopt = "number,line"
-opt.wrap = false
+-- Smart soft-wrap: long lines visually wrap at word boundaries (linebreak),
+-- the wrapped portion preserves the original indent (breakindent), and a
+-- subtle ↪ marker shows where wrap occurred. File content is NOT modified —
+-- this is purely visual.
+opt.wrap = true
+opt.linebreak = true
+opt.breakindent = true
+opt.showbreak = "↪ "
 
 -- Indent
 opt.expandtab = true
