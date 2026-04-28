@@ -30,8 +30,9 @@ return {
   --
   -- Workflow:
   --   1. Open any .go file
-  --   2. <leader>cgv → browser opens with full function call graph from main()
-  --   3. Click nodes to navigate; pan/zoom for the whole project
+  --   2. <leader>cgv → renders full call graph from main(), opens in Preview.app
+  --   3. <leader>cgV → call graph focused on the package of the current file
+  --   4. macOS Preview.app supports zoom / pan / search — no browser involved
   --
   -- Requires: go-callvis, goda, graphviz (dot). Installed by install.sh.
   --
@@ -51,58 +52,70 @@ return {
         if #found > 0 then return vim.fn.fnamemodify(found[1], ":h") end
         return nil
       end
+
+      -- One-shot go-callvis render: SVG to /tmp + open in Preview.app.
+      -- macOS-native, no browser. Preview supports zoom / pan / Cmd-F search.
+      -- Returns immediately; renders async and opens Preview on success.
+      _G.__go_callvis_render = function(focus)
+        local root = _G.__find_go_root()
+        if not root then
+          vim.notify("go-callvis: no go.mod found in any parent of current file", vim.log.levels.ERROR)
+          return
+        end
+        local stamp = tostring(os.time())
+        local out_base = "/tmp/dora-callgraph-" .. stamp        -- without .svg
+        local out_svg  = out_base .. ".svg"
+        local args = {
+          "go-callvis",
+          "-nostd",
+          "-group", "pkg,type",
+          "-format", "svg",
+          "-graphviz",                -- run dot to actually render to SVG
+          "-file", out_base,          -- go-callvis appends .<format>
+        }
+        if focus and focus ~= "" then
+          table.insert(args, "-focus")
+          table.insert(args, focus)
+        end
+        table.insert(args, "./...")
+        local label = focus and ("focus=" .. focus) or "full"
+        vim.notify(("go-callvis (%s) rendering… (~10-30s first run)"):format(label),
+          vim.log.levels.INFO)
+        vim.fn.jobstart(args, {
+          cwd = root,
+          on_stderr = function(_, data)
+            local msg = table.concat(data, "\n"):gsub("\n+$", "")
+            if msg ~= "" then
+              vim.schedule(function() vim.notify("go-callvis: " .. msg, vim.log.levels.WARN) end)
+            end
+          end,
+          on_exit = function(_, code)
+            vim.schedule(function()
+              if code ~= 0 then
+                vim.notify("go-callvis exited with code " .. code, vim.log.levels.ERROR)
+                return
+              end
+              if vim.fn.filereadable(out_svg) ~= 1 then
+                vim.notify("go-callvis finished but " .. out_svg .. " not found", vim.log.levels.ERROR)
+                return
+              end
+              vim.fn.jobstart({ "open", "-a", "Preview", out_svg }, { detach = true })
+              vim.notify("Call graph → Preview.app\n" .. out_svg, vim.log.levels.INFO)
+            end)
+          end,
+        })
+      end
     end,
     keys = {
-      -- Full project call graph from main(): every function, every call edge,
-      -- color-coded by package. Spawns go-callvis in HTTP server mode and opens
-      -- the browser when the server is ready.
-      --
-      -- IMPORTANT: do NOT pass `-file` together with `-http` — `-file` switches
-      -- go-callvis to one-shot file mode and the HTTP server never starts.
+      -- Full project call graph: every function from main() down, edges color-coded by pkg.
       {
         "<leader>cgv",
-        function()
-          local root = _G.__find_go_root()
-          if not root then
-            vim.notify("go-callvis: no go.mod found in any parent of current file", vim.log.levels.ERROR)
-            return
-          end
-          local args = { "go-callvis", "-nostd", "-group", "pkg,type", "-http", ":7878", "./..." }
-          _G.__go_callvis_job = _G.__go_callvis_job or {}
-          if _G.__go_callvis_job.pid and _G.__go_callvis_job.id and vim.fn.jobwait({ _G.__go_callvis_job.id }, 0)[1] == -1 then
-            vim.notify("go-callvis already running — reopening browser at http://localhost:7878", vim.log.levels.INFO)
-            vim.fn.system("open http://localhost:7878")
-            return
-          end
-          _G.__go_callvis_job.id = vim.fn.jobstart(args, {
-            cwd = root,
-            on_stdout = function(_, data)
-              for _, line in ipairs(data) do
-                if line:match("http serving at") then
-                  vim.schedule(function() vim.fn.system("open http://localhost:7878") end)
-                end
-              end
-            end,
-            on_stderr = function(_, data)
-              local msg = table.concat(data, "\n"):gsub("\n+$", "")
-              if msg ~= "" then vim.schedule(function() vim.notify("go-callvis: " .. msg, vim.log.levels.WARN) end) end
-            end,
-            on_exit = function(_, code)
-              if code ~= 0 then
-                vim.schedule(function() vim.notify("go-callvis exited with code " .. code, vim.log.levels.ERROR) end)
-              end
-              _G.__go_callvis_job.id = nil
-            end,
-          })
-          _G.__go_callvis_job.pid = vim.fn.jobpid(_G.__go_callvis_job.id)
-          vim.notify("go-callvis starting (~10-30s for first analysis)...", vim.log.levels.INFO)
-        end,
-        desc = "Go: visualize full call graph (browser)",
+        function() _G.__go_callvis_render(nil) end,
+        desc = "Go: full call graph → Preview.app",
         ft = "go",
       },
 
-      -- Focus the call graph on the package containing the current file.
-      -- Useful when the full project graph is too dense.
+      -- Focused on the package of the current file.
       {
         "<leader>cgV",
         function()
@@ -112,45 +125,11 @@ return {
             return
           end
           local pkg_dir = vim.fn.expand("%:p:h")
-          local rel = pkg_dir:sub(#root + 2)  -- strip root prefix + slash
+          local rel = pkg_dir:sub(#root + 2)
           if rel == "" then rel = "." end
-          local args = { "go-callvis", "-nostd", "-focus", rel, "-http", ":7878", "./..." }
-          if _G.__go_callvis_job and _G.__go_callvis_job.id and vim.fn.jobwait({ _G.__go_callvis_job.id }, 0)[1] == -1 then
-            vim.fn.jobstop(_G.__go_callvis_job.id)
-          end
-          _G.__go_callvis_job = { id = vim.fn.jobstart(args, {
-            cwd = root,
-            on_stdout = function(_, data)
-              for _, line in ipairs(data) do
-                if line:match("http serving at") then
-                  vim.schedule(function() vim.fn.system("open http://localhost:7878") end)
-                end
-              end
-            end,
-            on_stderr = function(_, data)
-              local msg = table.concat(data, "\n"):gsub("\n+$", "")
-              if msg ~= "" then vim.schedule(function() vim.notify("go-callvis: " .. msg, vim.log.levels.WARN) end) end
-            end,
-          }) }
-          vim.notify("go-callvis (focus=" .. rel .. ") starting...", vim.log.levels.INFO)
+          _G.__go_callvis_render(rel)
         end,
-        desc = "Go: call graph focused on current package",
-        ft = "go",
-      },
-
-      -- Stop the running go-callvis HTTP server.
-      {
-        "<leader>cgx",
-        function()
-          if _G.__go_callvis_job and _G.__go_callvis_job.id then
-            vim.fn.jobstop(_G.__go_callvis_job.id)
-            _G.__go_callvis_job.id = nil
-            vim.notify("go-callvis stopped", vim.log.levels.INFO)
-          else
-            vim.notify("go-callvis not running", vim.log.levels.WARN)
-          end
-        end,
-        desc = "Go: stop go-callvis server",
+        desc = "Go: call graph focused on current package → Preview.app",
         ft = "go",
       },
 
