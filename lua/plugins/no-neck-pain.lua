@@ -13,6 +13,20 @@
 -- the dead-end scratch buffer). After toggling, focus is forced back to
 -- the main code buffer so you don't land in the padding by accident.
 
+-- Per-filetype width: prose / docs (markdown, rst, asciidoc, org, help, ...) need
+-- a wider main buffer because tables and long sentences don't fit in a 100-col
+-- code-style band. Code stays at 100. Tweak the table or the numbers as needed.
+local PROSE_WIDTH = 160
+local CODE_WIDTH  = 100
+local PROSE_FT = {
+  markdown = true,  quarto   = true,  rst      = true,
+  asciidoc = true,  org      = true,  vimwiki  = true,
+  help     = true,  text     = true,  tex      = true,
+}
+local function decide_width()
+  return PROSE_FT[vim.bo.filetype] and PROSE_WIDTH or CODE_WIDTH
+end
+
 -- Detect "tree-like" side panels that confuse NNP's layout calculation.
 -- If any are open, close them first so NNP gets a clean single-window state
 -- before it inserts both padding buffers.
@@ -46,6 +60,8 @@ local function toggle_nnp()
   vim.g._dora_nnp_active = not vim.g._dora_nnp_active
   vim.cmd("NoNeckPain")
   if vim.g._dora_nnp_active then
+    -- Resize main buffer to fit the current filetype's needs (prose vs code).
+    pcall(vim.cmd, "NoNeckPainResize " .. decide_width())
     vim.g._dora_nnp_saved = {
       number         = vim.o.number,
       relativenumber = vim.o.relativenumber,
