@@ -513,5 +513,15 @@ map("n", "<leader>cF", function()
   })
 end, { desc = "LSP: fix all + organize imports" })
 
+-- ============================================================
+-- (19) FLOATING NEO-TREE for <leader>e
+-- ============================================================
+-- LazyVim binds <leader>e to neo-tree opened on the LEFT as a sidebar.
+-- We prefer a centered floating popup for quick file peeks: open, navigate,
+-- enter the file, and the popup closes. The persistent left sidebar is still
+-- available via <leader>oe / <D-1> (Snacks.explorer) for project-tree work.
+map("n", "<leader>e", "<cmd>Neotree position=float toggle reveal<CR>",
+  { desc = "Explorer (floating popup)" })
+
 -- Remove a few LazyVim defaults that conflict with our IDEA mappings.
 del("n", "<leader>l") -- avoid clash with <D-l>
