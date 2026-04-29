@@ -162,21 +162,24 @@ if vim.g.neovide then
   -- artifacts like in terminal mode. cursor_smooth_blink turns the
   -- guicursor blinkon/blinkoff (set in vim.opt.guicursor above) into
   -- smooth fades = breathing.
-  vim.g.neovide_cursor_animation_length       = 0.06
-  vim.g.neovide_cursor_trail_size             = 0.7   -- was 0.5: more visible smear
+  -- animation_length 0.08 gives the cursor enough travel time for the
+  -- trail/particles to actually be visible (0.05-0.06 felt instant — trail
+  -- finished before the eye caught it). trail_size 1.0 = full smear length.
+  vim.g.neovide_cursor_animation_length       = 0.08
+  vim.g.neovide_cursor_trail_size             = 1.0   -- was 0.7: maximum smear
   vim.g.neovide_cursor_animate_in_insert_mode = true
   vim.g.neovide_cursor_smooth_blink           = true
 
   -- Cursor particle effect — pixie-dust trail behind cursor when moving.
   -- Modes: "" (off) | "railgun" | "torpedo" | "pixiedust" | "sonicboom"
   --        | "ripple" | "wireframe"
-  -- Subtle bumps over the previous values for a slightly livelier feel
-  -- without going flashy.
+  -- particle_lifetime 2.5 + density 20 makes the trail visibly linger
+  -- behind the cursor instead of vanishing in a frame.
   vim.g.neovide_cursor_vfx_mode              = "pixiedust"
-  vim.g.neovide_cursor_vfx_particle_density  = 16.0   -- was 12
-  vim.g.neovide_cursor_vfx_particle_speed    = 18.0   -- was 16
-  vim.g.neovide_cursor_vfx_particle_lifetime = 1.8    -- was 1.5
-  vim.g.neovide_cursor_vfx_opacity           = 220.0  -- was 200
+  vim.g.neovide_cursor_vfx_particle_density  = 20.0   -- was 16
+  vim.g.neovide_cursor_vfx_particle_speed    = 18.0
+  vim.g.neovide_cursor_vfx_particle_lifetime = 2.5    -- was 1.8 — linger longer
+  vim.g.neovide_cursor_vfx_opacity           = 240.0  -- was 220 — punchier
 
   -- Floating windows: rounded corners + soft drop shadow (IDE-style depth).
   vim.g.neovide_floating_corner_radius      = 0.8
