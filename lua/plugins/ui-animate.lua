@@ -28,27 +28,11 @@ return {
     end,
   },
 
-  -- Animated indent line for current scope.
+  -- Indent guides handled by snacks.indent (see plugins/snacks-indent.lua).
+  -- mini.indentscope is disabled to avoid drawing two lines on top of each
+  -- other on the current scope.
   {
     "nvim-mini/mini.indentscope",
-    event = "BufReadPre",
-    opts = {
-      symbol = "│",
-      options = { try_as_border = true },
-      draw = {
-        delay = 50,
-        animation = function() return 8 end,
-      },
-    },
-    init = function()
-      vim.api.nvim_create_autocmd("FileType", {
-        pattern = {
-          "help", "alpha", "dashboard", "snacks_dashboard",
-          "neo-tree", "Trouble", "trouble", "lazy", "mason",
-          "notify", "toggleterm", "lazyterm", "Avante", "AvanteInput",
-        },
-        callback = function() vim.b.miniindentscope_disable = true end,
-      })
-    end,
+    enabled = false,
   },
 }

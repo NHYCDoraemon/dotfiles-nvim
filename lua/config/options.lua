@@ -16,6 +16,23 @@ opt.number = true
 opt.relativenumber = true
 opt.cursorline = true
 opt.cursorlineopt = "number,line"
+
+-- Cursor: shape per mode + blink with breathing fade. Combined with
+-- vim.g.neovide_cursor_smooth_blink = true (set later in this file),
+-- the blinkon/blinkoff transitions become smooth fades — actual breathing
+-- rather than abrupt on/off.
+--   blinkwait500  pause 500ms before first blink (ergonomic when typing)
+--   blinkon400    fade-up to fully visible over 400ms
+--   blinkoff300   fade-down to invisible over 300ms
+-- Result: ~700ms breathing cycle, gentle but noticeable.
+opt.guicursor = table.concat({
+  "n-v-c:block",                 -- normal/visual/cmd: block
+  "i-ci-ve:ver25",               -- insert/cmd-insert/visual-exclusive: vertical bar (25% width)
+  "r-cr:hor20",                  -- replace/cmd-replace: horizontal bar (20% height)
+  "o:hor50",                     -- operator-pending: bigger horizontal
+  "a:blinkwait500-blinkon400-blinkoff300-Cursor/lCursor",
+  "sm:block-blinkwait175-blinkoff150-blinkon175",
+}, ",")
 -- Smart soft-wrap: long lines visually wrap at word boundaries (linebreak),
 -- the wrapped portion preserves the original indent (breakindent), and a
 -- subtle ↪ marker shows where wrap occurred. File content is NOT modified —
@@ -142,21 +159,24 @@ if vim.g.neovide then
   -- look the same in windowed and fullscreen and don't have that issue.
 
   -- Smooth cursor: Neovide handles this natively at pixel level — no smear-cursor
-  -- artifacts like in terminal mode.
-  vim.g.neovide_cursor_animation_length     = 0.05
-  vim.g.neovide_cursor_trail_size           = 0.5
+  -- artifacts like in terminal mode. cursor_smooth_blink turns the
+  -- guicursor blinkon/blinkoff (set in vim.opt.guicursor above) into
+  -- smooth fades = breathing.
+  vim.g.neovide_cursor_animation_length       = 0.06
+  vim.g.neovide_cursor_trail_size             = 0.7   -- was 0.5: more visible smear
   vim.g.neovide_cursor_animate_in_insert_mode = true
-  vim.g.neovide_cursor_smooth_blink         = true
+  vim.g.neovide_cursor_smooth_blink           = true
 
   -- Cursor particle effect — pixie-dust trail behind cursor when moving.
   -- Modes: "" (off) | "railgun" | "torpedo" | "pixiedust" | "sonicboom"
   --        | "ripple" | "wireframe"
-  -- `pixiedust` is elegant + not distracting; cycle others via <leader>uV.
-  vim.g.neovide_cursor_vfx_mode             = "pixiedust"
-  vim.g.neovide_cursor_vfx_particle_density = 12.0
-  vim.g.neovide_cursor_vfx_particle_speed   = 16.0
-  vim.g.neovide_cursor_vfx_particle_lifetime = 1.5
-  vim.g.neovide_cursor_vfx_opacity          = 200.0
+  -- Subtle bumps over the previous values for a slightly livelier feel
+  -- without going flashy.
+  vim.g.neovide_cursor_vfx_mode              = "pixiedust"
+  vim.g.neovide_cursor_vfx_particle_density  = 16.0   -- was 12
+  vim.g.neovide_cursor_vfx_particle_speed    = 18.0   -- was 16
+  vim.g.neovide_cursor_vfx_particle_lifetime = 1.8    -- was 1.5
+  vim.g.neovide_cursor_vfx_opacity           = 220.0  -- was 200
 
   -- Floating windows: rounded corners + soft drop shadow (IDE-style depth).
   vim.g.neovide_floating_corner_radius      = 0.8
