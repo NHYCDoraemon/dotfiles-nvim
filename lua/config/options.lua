@@ -24,6 +24,21 @@ opt.wrap = true
 opt.linebreak = true
 opt.breakindent = true
 opt.showbreak = "↪ "
+opt.colorcolumn = "100"      -- thin vertical line at column 100 (line-width hint)
+
+-- Pretty diagnostic icons (replaces default E/W/I/H letters in the gutter
+-- and on the satellite scrollbar). Theme controls the colors via
+-- DiagnosticSign* highlight groups.
+vim.diagnostic.config({
+  signs = {
+    text = {
+      [vim.diagnostic.severity.ERROR] = "✘",
+      [vim.diagnostic.severity.WARN]  = "⚠",
+      [vim.diagnostic.severity.INFO]  = "●",
+      [vim.diagnostic.severity.HINT]  = "◆",
+    },
+  },
+})
 
 -- Indent
 opt.expandtab = true

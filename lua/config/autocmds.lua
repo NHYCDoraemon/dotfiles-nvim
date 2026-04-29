@@ -111,6 +111,17 @@ do
   })
 end
 
+-- Yank highlight: brief flash of the just-yanked region. Default vim duration
+-- is 175ms with a low-key gray; bump to 350ms and reuse the colorscheme's
+-- `IncSearch` group so the flash inherits whatever theme is active (rose-pine
+-- gives a soft pink, kanagawa a warm gold, etc.).
+vim.api.nvim_create_autocmd("TextYankPost", {
+  group = vim.api.nvim_create_augroup("dora_yank_highlight", { clear = true }),
+  callback = function()
+    (vim.hl or vim.highlight).on_yank({ higroup = "IncSearch", timeout = 350 })
+  end,
+})
+
 -- `q` closes any floating window (goto-preview peek, LSP hover, dap-ui floats,
 -- snacks help-style popups, etc.). LazyVim only binds q for a fixed list of
 -- filetypes; this catches the rest by detecting `relative != ""` (= floating).
