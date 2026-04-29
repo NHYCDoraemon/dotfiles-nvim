@@ -17,20 +17,20 @@ opt.relativenumber = true
 opt.cursorline = true
 opt.cursorlineopt = "number,line"
 
--- Cursor: shape per mode + blink with breathing fade. Combined with
+-- Cursor: shape per mode + slow breathing blink. Combined with
 -- vim.g.neovide_cursor_smooth_blink = true (set later in this file),
--- the blinkon/blinkoff transitions become smooth fades — actual breathing
+-- blinkon/blinkoff transitions become smooth fades — actual breathing
 -- rather than abrupt on/off.
---   blinkwait500  pause 500ms before first blink (ergonomic when typing)
---   blinkon400    fade-up to fully visible over 400ms
---   blinkoff300   fade-down to invisible over 300ms
--- Result: ~700ms breathing cycle, gentle but noticeable.
+--   blinkwait1000  pause 1s before first blink (ergonomic when typing)
+--   blinkon1000    fade-up to fully visible over 1s
+--   blinkoff800    fade-down to invisible over 0.8s
+-- ~1.8s total cycle — closer to a calm breathing rhythm than a heartbeat.
 opt.guicursor = table.concat({
   "n-v-c:block",                 -- normal/visual/cmd: block
   "i-ci-ve:ver25",               -- insert/cmd-insert/visual-exclusive: vertical bar (25% width)
   "r-cr:hor20",                  -- replace/cmd-replace: horizontal bar (20% height)
   "o:hor50",                     -- operator-pending: bigger horizontal
-  "a:blinkwait500-blinkon400-blinkoff300-Cursor/lCursor",
+  "a:blinkwait1000-blinkon1000-blinkoff800-Cursor/lCursor",
   "sm:block-blinkwait175-blinkoff150-blinkon175",
 }, ",")
 -- Smart soft-wrap: long lines visually wrap at word boundaries (linebreak),
