@@ -4,6 +4,20 @@
 local map = vim.keymap.set
 local del = function(mode, lhs) pcall(vim.keymap.del, mode, lhs) end
 
+-- Project root resolver: walk up from the current buffer until we find a
+-- project marker. Used by file/grep/smart pickers so they don't accidentally
+-- search the entire $HOME when nvim's cwd is set above the project.
+-- Falls back to nvim's cwd if no marker is found.
+local function project_root()
+  local file = vim.api.nvim_buf_get_name(0)
+  local start = (file ~= "") and vim.fn.fnamemodify(file, ":p:h") or vim.fn.getcwd()
+  local root = vim.fs.root(start, {
+    ".git", "go.mod", "package.json", "Cargo.toml",
+    "pyproject.toml", "lazy-lock.json", ".hg",
+  })
+  return root or vim.fn.getcwd()
+end
+
 -- ============================================================
 -- (1) EDITING
 -- ============================================================
@@ -112,11 +126,11 @@ map("v", "<D-A-t>", "sa", { remap = true, desc = "Surround selection (mini.surro
 -- ============================================================
 -- (2) SEARCH
 -- ============================================================
-map("n", "<leader><space>", function() Snacks.picker.smart() end, { desc = "Search Everywhere" })
+map("n", "<leader><space>", function() Snacks.picker.smart({ cwd = project_root() }) end, { desc = "Search Everywhere (project root)" })
 map("n", "<D-S-a>", function() Snacks.picker.commands() end, { desc = "Find Action" })
 map("n", "<D-f>",   "/", { desc = "Find in file" })
 map("n", "<D-r>",   ":%s/", { desc = "Replace in file" })
-map("n", "<D-S-f>", function() Snacks.picker.grep() end, { desc = "Find in path" })
+map("n", "<D-S-f>", function() Snacks.picker.grep({ cwd = project_root() }) end, { desc = "Find in path (project root)" })
 map("n", "<D-S-r>", "<cmd>Spectre<CR>", { desc = "Replace in path" })
 map("n", "<D-g>",   "n", { desc = "Find next" })
 map("n", "<D-S-g>", "N", { desc = "Find prev" })
@@ -129,7 +143,7 @@ map("n", "<D-o>", function()
     filter = function(s) return s.kind == "Class" or s.kind == "Interface" or s.kind == "Struct" end,
   })
 end, { desc = "Go to Class" })
-map("n", "<D-S-o>", function() Snacks.picker.files() end,         { desc = "Go to File" })
+map("n", "<D-S-o>", function() Snacks.picker.files({ cwd = project_root() }) end, { desc = "Go to File (project root)" })
 map("n", "<D-A-o>", function() Snacks.picker.lsp_symbols() end,   { desc = "Go to Symbol" })
 map("n", "<D-e>",   function() Snacks.picker.recent() end,        { desc = "Recent Files" })
 map("n", "<D-S-e>", function() Snacks.picker.jumps() end,         { desc = "Recent Locations" })
