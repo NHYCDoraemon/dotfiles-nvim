@@ -258,6 +258,16 @@ map("n", "<leader>nt", "<cmd>ObsidianTags<CR>",         { desc = "Browse tags" }
 map("n", "<leader>nl", "<cmd>ObsidianLink<CR>",         { desc = "Insert link" })
 map("n", "<leader>nb", "<cmd>ObsidianBacklinks<CR>",    { desc = "Backlinks" })
 map("n", "<leader>nT", "<cmd>ObsidianToggleCheckbox<CR>", { desc = "Toggle checkbox" })
+-- Vault navigation: inbox / yesterday / MoC picker / weekly-review prompt.
+map("n", "<leader>ni", function() vim.cmd("edit ~/notes/inbox.md") end,
+  { desc = "Notes: open inbox" })
+map("n", "<leader>ny", "<cmd>ObsidianYesterday<CR>",  { desc = "Notes: yesterday's daily" })
+map("n", "<leader>nm", function()
+  Snacks.picker.files({ cwd = vim.fn.expand("~/notes/mocs"), title = "MoCs" })
+end, { desc = "Notes: pick MoC" })
+-- Open the weekly-review prompt in a split so you can :%y+ then paste into AI chat.
+map("n", "<leader>nR", function() vim.cmd("vsplit ~/notes/scripts/weekly-review.md") end,
+  { desc = "Notes: weekly-review prompt" })
 
 -- (Avante AI keymaps removed — migrated to CodeCompanion. <leader>aa is now
 --  bound by the codecompanion plugin spec itself in lua/plugins/ai.lua.)

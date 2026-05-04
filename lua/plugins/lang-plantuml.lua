@@ -80,13 +80,71 @@ return {
         })
       end
 
+      -- ASCII render: plantuml -tutxt outputs Unicode box-drawing art.
+      -- No image rendering — works in Neovide, terminal, even SSH.
+      local function render_plantuml_ascii(buf)
+        buf = buf or vim.api.nvim_get_current_buf()
+        local src = vim.api.nvim_buf_get_name(buf)
+        if src == "" or not src:match("%.p?u?ml?$") then
+          vim.notify("Not a .puml/.plantuml file", vim.log.levels.WARN)
+          return
+        end
+        local cmd = string.format("plantuml -tutxt -pipe < %s", vim.fn.shellescape(src))
+        vim.fn.jobstart({ "sh", "-c", cmd }, {
+          stdout_buffered = true,
+          on_stdout = function(_, data)
+            if not data then return end
+            while #data > 0 and data[#data] == "" do table.remove(data) end
+            if #data == 0 then
+              vim.schedule(function()
+                vim.notify("PlantUML ASCII: empty output (check syntax)", vim.log.levels.WARN)
+              end)
+              return
+            end
+            vim.schedule(function()
+              local scratch = vim.api.nvim_create_buf(false, true)
+              vim.api.nvim_buf_set_lines(scratch, 0, -1, false, data)
+              vim.bo[scratch].bufhidden = "wipe"
+              vim.bo[scratch].buftype = "nofile"
+              local w = math.min(vim.o.columns - 4, 160)
+              local h = math.min(vim.o.lines - 4, #data + 2)
+              local win = vim.api.nvim_open_win(scratch, true, {
+                relative = "editor",
+                width = w,
+                height = h,
+                row = math.floor((vim.o.lines - h) / 2),
+                col = math.floor((vim.o.columns - w) / 2),
+                border = "rounded",
+                title = " PlantUML ASCII — q/Esc close ",
+                title_pos = "center",
+                style = "minimal",
+              })
+              vim.wo[win].wrap = false
+              vim.keymap.set("n", "q", "<cmd>close<cr>", { buffer = scratch })
+              vim.keymap.set("n", "<Esc>", "<cmd>close<cr>", { buffer = scratch })
+            end)
+          end,
+          on_exit = function(_, code)
+            if code ~= 0 then
+              vim.schedule(function()
+                vim.notify("PlantUML ASCII render failed (exit " .. code .. ")", vim.log.levels.ERROR)
+              end)
+            end
+          end,
+        })
+      end
+
       vim.api.nvim_create_autocmd("FileType", {
         group = vim.api.nvim_create_augroup("UserPlantumlKeys", { clear = true }),
         pattern = "plantuml",
         callback = function(args)
           vim.keymap.set("n", "<leader>mr", function() render_plantuml(args.buf) end, {
             buffer = args.buf,
-            desc = "PlantUML: render & preview",
+            desc = "PlantUML: render PNG & preview",
+          })
+          vim.keymap.set("n", "<leader>mR", function() render_plantuml_ascii(args.buf) end, {
+            buffer = args.buf,
+            desc = "PlantUML: render ASCII art in buffer",
           })
         end,
       })

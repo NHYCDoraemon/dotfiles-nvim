@@ -14,3 +14,74 @@
 #        `nvd path/to/file` → open file in neovide
 # ----------------------------------------------------------------------------
 nvd() { neovide --fork "$@" }
+
+# ----------------------------------------------------------------------------
+# eza — modern `ls` replacement with icons, git status, tree view.
+# Install: `brew install eza`. Aliases only register if eza is present, so
+# this snippet stays safe on fresh machines before brew install runs.
+#   ls   → eza, dirs first, icons (needs Nerd Font — Liga Comic Mono is NF)
+#   ll   → long, human sizes, git column
+#   la   → long + dotfiles
+#   lt   → tree, depth 2
+# ----------------------------------------------------------------------------
+if command -v eza >/dev/null 2>&1; then
+  alias ls='eza --icons=auto --group-directories-first'
+  alias ll='eza -lh --icons=auto --group-directories-first --git'
+  alias la='eza -lah --icons=auto --group-directories-first --git'
+  alias lt='eza --tree --level=2 --icons=auto --group-directories-first'
+fi
+
+# ----------------------------------------------------------------------------
+# bat — `cat` with syntax highlighting + git diff markers.
+# BAT_THEME picks a palette close to Tokyonight Moon (cool dark).
+# Also re-aliases `cat` to bat when present (use `\cat` to bypass).
+# ----------------------------------------------------------------------------
+if command -v bat >/dev/null 2>&1; then
+  export BAT_THEME="Coldark-Dark"
+  alias cat='bat --paging=never --style=plain'
+fi
+
+# ----------------------------------------------------------------------------
+# fzf — fuzzy finder. Brew install does NOT auto-wire keybindings/completion;
+# source them explicitly here. Requires fd + bat for the previewers below.
+#   Ctrl+R  history fuzzy search
+#   Ctrl+T  paste a fuzzy-selected file path into the command line
+#   Alt+C   cd into a fuzzy-selected directory
+# ----------------------------------------------------------------------------
+if command -v fzf >/dev/null 2>&1; then
+  FZF_BASE="$(brew --prefix fzf 2>/dev/null)"
+  [ -f "$FZF_BASE/shell/key-bindings.zsh" ] && source "$FZF_BASE/shell/key-bindings.zsh"
+  [ -f "$FZF_BASE/shell/completion.zsh" ]   && source "$FZF_BASE/shell/completion.zsh"
+  unset FZF_BASE
+
+  # Use fd for file/dir source (respects .gitignore, fast).
+  if command -v fd >/dev/null 2>&1; then
+    export FZF_DEFAULT_COMMAND='fd --type f --hidden --follow --exclude .git'
+    export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
+    export FZF_ALT_C_COMMAND='fd --type d --hidden --follow --exclude .git'
+  fi
+
+  # Tokyonight Moon-aligned colors + bat preview window.
+  export FZF_DEFAULT_OPTS="
+    --height 60% --layout=reverse --border=rounded
+    --color=bg+:#2f334d,bg:#222436,spinner:#c099ff,hl:#82aaff
+    --color=fg:#c8d3f5,header:#82aaff,info:#ffc777,pointer:#c099ff
+    --color=marker:#c3e88d,fg+:#c8d3f5,prompt:#86e1fc,hl+:#82aaff"
+  command -v bat >/dev/null 2>&1 && export FZF_CTRL_T_OPTS="--preview 'bat --color=always --style=numbers --line-range=:200 {}'"
+fi
+
+# ----------------------------------------------------------------------------
+# zoxide — smarter `cd`. `z foo` jumps to the most-frecent dir matching foo.
+# Init MUST come after compinit (oh-my-zsh handles compinit), so this is fine.
+# ----------------------------------------------------------------------------
+if command -v zoxide >/dev/null 2>&1; then
+  eval "$(zoxide init zsh)"
+fi
+
+# ----------------------------------------------------------------------------
+# starship — cross-shell prompt. Replaces oh-my-zsh's own theme (ZSH_THEME="").
+# Config lives at ~/.config/starship.toml (auto-created on first run if absent).
+# ----------------------------------------------------------------------------
+if command -v starship >/dev/null 2>&1; then
+  eval "$(starship init zsh)"
+fi

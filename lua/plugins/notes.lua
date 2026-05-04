@@ -1,10 +1,23 @@
 return {
+  -- Reclaim <leader>n namespace for notes/wiki.
+  -- LazyVim binds solo <leader>n → Snacks notification history (ui.lua:286 +
+  -- extras/editor/snacks_picker.lua:63), which fires after timeoutlen and
+  -- shadows our <leader>n* chord (notes keymaps in keymaps.lua §9).
+  -- Move notification history to <leader>fn (find namespace).
+  {
+    "folke/snacks.nvim",
+    keys = {
+      { "<leader>n",  false },
+      { "<leader>fn", function() Snacks.picker.notifications() end, desc = "Notifications history" },
+    },
+  },
+
   {
     "epwalsh/obsidian.nvim",
     version = "*",
     ft = "markdown",
     cmd = {
-      "ObsidianNew", "ObsidianToday", "ObsidianQuickSwitch",
+      "ObsidianNew", "ObsidianToday", "ObsidianYesterday", "ObsidianQuickSwitch",
       "ObsidianSearch", "ObsidianTags", "ObsidianBacklinks",
       "ObsidianLink", "ObsidianToggleCheckbox", "ObsidianOpen",
     },
@@ -26,25 +39,27 @@ return {
       mappings = {},
       new_notes_location = "current_dir",
       preferred_link_style = "wiki",
-      picker = { name = "snacks.pick" },
+      picker = { name = "telescope.nvim" },
       ui = {
         enable = false, -- markview handles rendering instead
       },
     },
   },
 
-  -- markview.nvim DISABLED for markdown — render-markdown.nvim (already loaded
-  -- as an Avante dependency) is now the primary markdown renderer with a more
-  -- elegant default. Keeping markview spec around but inactive in case we want
-  -- to re-enable it later. The `enabled = false` flag tells lazy.nvim to skip
-  -- loading the plugin.
+  -- markview.nvim — primary markdown renderer for .md files.
+  -- Switched from render-markdown.nvim because markview's `tables.use_virt_lines`
+  -- redraws wide tables as virtual lines (independent of vim's `wrap`), so long
+  -- cell content stays inside aligned borders instead of tearing. render-markdown
+  -- is kept (scoped to Avante chat only) so Avante's chat UI keeps its renderer.
   {
     "OXY2DEV/markview.nvim",
-    enabled = false,
-    ft = { "markdown", "Avante" },
+    ft = { "markdown" },
+    cmd = { "Markview" },
     dependencies = { "nvim-tree/nvim-web-devicons" },
     keys = {
-      { "<leader>mt", "<cmd>RenderMarkdown toggle<cr>", desc = "Markdown: toggle render", ft = "markdown" },
+      { "<leader>mt", "<cmd>Markview toggle<cr>",  desc = "Markdown: toggle render",  ft = "markdown" },
+      { "<leader>me", "<cmd>Markview enable<cr>",  desc = "Markdown: enable render",  ft = "markdown" },
+      { "<leader>md", "<cmd>Markview disable<cr>", desc = "Markdown: disable render (raw)", ft = "markdown" },
     },
     opts = {
       preview = {
@@ -146,14 +161,38 @@ return {
     },
   },
 
-  -- render-markdown.nvim — primary markdown renderer (Typora-esque).
-  -- Originally pulled in as an Avante dependency; here we override its opts
-  -- to give .md files a polished WYSIWYG-style render.
+  -- glow.nvim — TUI markdown preview via charmbracelet/glow in a floating
+  -- window. Unlike render-markdown.nvim (extmark-based, suffers from wrap
+  -- misalignment on wide tables), glow re-formats tables and wraps long cell
+  -- content INSIDE the borders, so wide tables stay readable without flipping
+  -- nowrap. Read-only — use it as a "viewer" pass for table-heavy docs.
+  --   <leader>mg → open Glow preview in float (q to close)
+  -- Requires glow on PATH (`brew install glow`).
+  {
+    "ellisonleao/glow.nvim",
+    cmd = "Glow",
+    ft = "markdown",
+    opts = {
+      style        = "dark",
+      border       = "rounded",
+      width_ratio  = 0.9,
+      height_ratio = 0.9,
+      pager        = false,
+    },
+    keys = {
+      { "<leader>mg", "<cmd>Glow<cr>", desc = "Markdown: glow TUI preview", ft = "markdown" },
+    },
+  },
+
+  -- render-markdown.nvim — scoped to Avante chat only. Markdown files are
+  -- rendered by markview.nvim above (better wide-table handling). Keeping
+  -- render-markdown loaded for Avante because it ships as an Avante dep and
+  -- powers Avante's chat-message rendering.
   {
     "MeanderingProgrammer/render-markdown.nvim",
-    ft = { "markdown", "Avante" },
+    ft = { "Avante" },
     opts = {
-      file_types = { "markdown", "Avante" },
+      file_types = { "Avante" },
 
       -- Mode-aware rendering: render in normal/cmdline; reveal raw in insert.
       render_modes = { "n", "c", "t" },
@@ -235,7 +274,12 @@ return {
         enabled = true,
         preset = "round",                       -- rounded corner cells
         style  = "full",
-        cell   = "padded",
+        -- 'trimmed' (vs 'padded') drops trailing padding when a cell would
+        -- overflow the window width — keeps borders aligned on wide tables
+        -- where one column has long content. wrap=true on markdown buffers
+        -- still bites for genuinely long content; flip wrap off if tables
+        -- still tear.
+        cell   = "trimmed",
       },
 
       link = {
@@ -251,9 +295,8 @@ return {
     },
 
     keys = {
-      { "<leader>mt", "<cmd>RenderMarkdown toggle<cr>", desc = "Markdown: toggle render", ft = "markdown" },
-      { "<leader>me", "<cmd>RenderMarkdown enable<cr>", desc = "Markdown: enable render",  ft = "markdown" },
-      { "<leader>md", "<cmd>RenderMarkdown disable<cr>", desc = "Markdown: disable render (raw)", ft = "markdown" },
+      -- Avante-scoped — markdown buffers use markview keymaps above.
+      { "<leader>mT", "<cmd>RenderMarkdown toggle<cr>",  desc = "Avante: toggle chat render",  ft = "Avante" },
     },
   },
 
