@@ -31,32 +31,38 @@ The script is **idempotent** — safe to re-run. It backs up any existing `~/.co
 |---|---|
 | **Base** | LazyVim · `lazy.nvim` · ~100 plugins |
 | **Languages** | Go (`gopls` + `gofumpt` + `delve`) · Rust (`rust-analyzer` + `crates.nvim` + `codelldb`) · Java 17 (`jdtls` + Lombok agent) · TS/React (`vtsls` + `eslint` + `tailwindcss-language-server`) · Python (`basedpyright` + `ruff` + `debugpy`) |
-| **IDEA layout** | `edgy.nvim` (left/right/bottom docks) · `bufferline.nvim` (tabs) · `dropbar.nvim` (breadcrumb) · `nvim-treesitter-context` (sticky scope) · `neominimap.nvim` (right minimap) · `outline.nvim` (Structure panel) |
-| **IDEA keymap** | Full macOS keymap (`⌘O`/`⌘B`/`⇧F6`/`⌘1-9`/etc.) wired to picker/LSP equivalents — requires terminal that forwards Cmd via Kitty Keyboard Protocol (Ghostty / Wezterm) |
+| **IDEA layout** | `edgy.nvim` (left/right/bottom docks) · `bufferline.nvim` (tabs) · `dropbar.nvim` (breadcrumb) · `nvim-treesitter-context` (sticky scope) · `neominimap.nvim` (right minimap) · `outline.nvim` (Structure panel) · `no-neck-pain.nvim` (symmetric centering / zen) |
+| **IDEA keymap** | Full macOS keymap (`⌘O`/`⌘B`/`⇧F6`/`⌘1-9`/etc.) wired to picker/LSP equivalents — requires terminal that forwards Cmd via Kitty Keyboard Protocol (Kitty / Ghostty / Wezterm) |
 | **Themes** | Catppuccin Mocha (default) · Kanagawa Wave — both with italic keywords/types/methods/comments |
-| **Animations** | `mini.animate` · `mini.indentscope` · `noice.nvim` (centered cmdline) · `smear-cursor.nvim` |
+| **Animations** | `mini.animate` · `mini.indentscope` · `noice.nvim` (centered cmdline) · `smear-cursor.nvim` · breathing-blink cursor (terminal) · neovide vibrancy (GUI) |
 | **AI** | none (use terminal-native CLIs like `claude`, `codex`, `aider`, `gh copilot` — battle-tested, no nvim plugin to fight with) |
 | **Data tooling** | `vim-dadbod-ui` (DB browser) · `kulala.nvim` (HTTP client) |
 | **Git** | `neogit` · `diffview.nvim` · `octo.nvim` (PR review) · `git-conflict.nvim` · `lazygit` |
-| **Wiki / Notes** | `obsidian.nvim` (vault at `~/notes`) · `markview.nvim` (in-buffer markdown render) |
+| **Refactoring** | `refactoring.nvim` — IntelliJ-style extract-function/variable/block menu via `<leader>cR` |
+| **Wiki / Notes** | `obsidian.nvim` (vault at `~/notes`, with inbox / MoC picker / weekly-review prompt keymaps) |
+| **Markdown render** | `markview.nvim` (primary, in-buffer, wide-table aware via `tables.use_virt_lines`) · `glow.nvim` (TUI float preview for table-heavy docs) · `render-markdown.nvim` (scoped to Avante chat only) |
+| **Diagrams** | `lang-plantuml` — render `.puml` to PNG (`<leader>mr`) **or** Unicode ASCII inside a float (`<leader>mR`, works over SSH / in Neovide) · `lang-mermaid` |
+| **Go extras** | `go-callvis` integration — render module call graph to DOT / SVG / PDF, open in Preview.app, or yank to clipboard for AI (`<leader>cg*` family) |
 | **Completion** | `blink.cmp` (Rust-based, faster than nvim-cmp) · `LuaSnip` · `friendly-snippets` |
 | **Debug** | `nvim-dap` + `dap-ui` + `dap-virtual-text` per-language adapters |
+| **Shell extras** | `shell/zshrc.snippet` is sourced from `~/.zshrc` and wires up `eza` / `bat` / `fzf` (Ctrl-R / Ctrl-T / Alt-C) / `zoxide` (`z foo`) / `starship` prompt — all guarded behind `command -v`, so missing tools are silently skipped |
 
 ---
 
 ## Requirements
 
 - **macOS** (Intel or Apple Silicon)
-- **Ghostty** terminal (or Wezterm) — installer adds it automatically. Apple Terminal **does not work** (no Cmd-key forwarding, no italic).
+- **Kitty** terminal (primary — `image.nvim` previews work reliably, full Kitty Keyboard Protocol). Ghostty and Wezterm both work too; Apple Terminal **does not** (no Cmd-key forwarding, no italic). Installer adds all three casks.
 - **Java 17 (Temurin)** if you want jdtls — installer warns if missing
 - **Node** + **Python 3** if you use TS / Python — installer warns if missing
 - **GitHub CLI (`gh`)** — only needed if you want `octo.nvim` PR review (run `gh auth login`)
+- **Optional shell tools** — installer ships `bat` + `fzf`. For the rest of the snippet (`eza`, `zoxide`, `starship`), `brew install eza zoxide starship` — the snippet auto-detects and skips anything missing.
 
 ---
 
 ## Quick keymap reference
 
-### IDEA shortcuts (work in Ghostty / Wezterm)
+### IDEA shortcuts (work in Kitty / Ghostty / Wezterm)
 
 | Key | Action |
 |---|---|
@@ -84,9 +90,45 @@ The script is **idempotent** — safe to re-run. It backs up any existing `~/.co
 | `<Space>og` | Git (Neogit) |
 | `<Space>ot` | Terminal |
 | `<Space>z` | Zen Mode |
+| `<Space>uN` | NoNeckPain — symmetric horizontal centering (chrome-off zen) |
 | `<Space>ff` / `<Space>fg` | Find files / Find text |
-| `<Space>nn` / `<Space>nd` | New note / Daily note (Obsidian) |
-| `<Space>nn` | New note (Obsidian) |
+| `<Space>fn` | Notification history (relocated from `<Space>n` to free the namespace) |
+
+### Notes / Obsidian (`<Space>n*`)
+
+| Key | Action |
+|---|---|
+| `<Space>nn` / `<Space>nd` | New note / Daily note |
+| `<Space>ny` | Yesterday's daily note |
+| `<Space>ni` | Open `~/notes/inbox.md` |
+| `<Space>nm` | Pick a MoC (Map of Content) from `~/notes/mocs` |
+| `<Space>nR` | Open weekly-review prompt in a vsplit (then `:%y+` and paste into AI chat) |
+| `<Space>nt` / `<Space>nl` / `<Space>nb` | Tags · Insert link · Backlinks |
+| `<Space>nT` | Toggle checkbox |
+
+### Markdown render
+
+| Key | Action |
+|---|---|
+| `<Space>mt` / `<Space>me` / `<Space>md` | markview — toggle / enable / disable (raw) |
+| `<Space>mg` | Glow TUI preview in float (best for wide tables) |
+| `<Space>mT` | render-markdown — toggle (Avante chat only) |
+
+### Diagrams (PlantUML / Mermaid)
+
+| Key | Action |
+|---|---|
+| `<Space>mr` | PlantUML → PNG, open in Preview.app |
+| `<Space>mR` | PlantUML → Unicode ASCII art in float (works over SSH / in Neovide) |
+
+### Go call graph (`<Space>cg*`, requires `go-callvis` + `graphviz`)
+
+| Key | Action |
+|---|---|
+| `<Space>cgg` / `<Space>cgv` | Render full / focused call graph → Preview.app |
+| `<Space>cgo` / `<Space>cgO` | Open latest DOT / SVG in floating buffer |
+| `<Space>cgy` / `<Space>cgY` | Yank latest DOT / SVG to clipboard (paste into AI) |
+| `<Space>cgT` | Module dependency graph |
 
 ### Editing power tools
 
@@ -123,6 +165,33 @@ work with any provider:
 Inside nvim, drop into a terminal: `:term` (or `<Space>ot` to dock at bottom via edgy).
 Run any of the above. Your env vars (`ANTHROPIC_API_KEY` / `OPENAI_API_KEY` / etc.)
 need to be in `~/.zshrc`.
+
+---
+
+## Shell extras (`shell/zshrc.snippet`)
+
+The installer appends one line to `~/.zshrc` that sources `shell/zshrc.snippet`. It registers:
+
+- `nvd path/to/file` — open a file in **Neovide** (forked, so the shell stays usable)
+- `ls` / `ll` / `la` / `lt` — `eza` aliases (icons, git column, tree)
+- `cat` — `bat` with paging off (use `\cat` to bypass)
+- `Ctrl-R` / `Ctrl-T` / `Alt-C` — `fzf` history / file / dir pickers (Tokyonight-themed, `bat` previewer)
+- `z foo` — `zoxide` jump-to-frecent-dir
+- prompt — `starship` (replaces oh-my-zsh's theme)
+
+Each block is gated behind `command -v X >/dev/null`, so a fresh machine without `eza` / `zoxide` / `starship` simply skips those blocks until you `brew install` them. If you need machine-specific secrets, drop them in `shell/.env` — that path is gitignored.
+
+---
+
+## Kitty config (`kitty/kitty.conf`)
+
+The installer symlinks the repo's `kitty/kitty.conf` into `~/.config/kitty/`. Highlights worth knowing about:
+
+- **Catppuccin Mocha palette is inlined** — do **not** run `kitty +kitten themes`, it would silently overwrite the inline section. (`current-theme.conf` is gitignored for the same reason.)
+- **Kitty hints** — `⌘⇧E` opens a URL hint, `⌘⇧P` then `F` / `L` / `W` / `H` / `N` grabs path / line / word / git-hash / line-number under labels.
+- **`notify_on_cmd_finish unfocused 10.0`** — long-running commands ping you only when the window is unfocused.
+- **`listen_on unix:/tmp/mykitty-{kitty_pid}`** — `kitty @ ...` remote-control commands work from any shell.
+- **Cursor trail tuned aggressive** — single-character moves leave a visible smear (real particle effects live in Neovide via `<leader>uV`).
 
 ---
 

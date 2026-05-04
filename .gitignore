@@ -9,3 +9,8 @@ data
 
 # Local secrets / machine-specific env (never commit)
 shell/.env
+
+# kitty themes-kitten output. The Catppuccin Mocha palette is inlined in
+# kitty/kitty.conf — see the warning at the bottom of that file. Anything
+# the themes kitten writes here would silently override the inline palette.
+kitty/current-theme.conf
