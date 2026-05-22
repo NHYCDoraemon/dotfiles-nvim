@@ -43,6 +43,7 @@ The script is **idempotent** — safe to re-run. It backs up any existing `~/.co
 | **Markdown render** | `markview.nvim` (primary, in-buffer, wide-table aware via `tables.use_virt_lines`) · `glow.nvim` (TUI float preview for table-heavy docs) · `render-markdown.nvim` (scoped to Avante chat only) |
 | **Diagrams** | `lang-plantuml` — render `.puml` to PNG (`<leader>mr`) **or** Unicode ASCII inside a float (`<leader>mR`, works over SSH / in Neovide) · `lang-mermaid` |
 | **Go extras** | `go-callvis` integration — render module call graph to DOT / SVG / PDF, open in Preview.app, or yank to clipboard for AI (`<leader>cg*` family) |
+| **Call hierarchy** | Recursive LSP call-tree + in-editor ASCII business graph for Java/Spring and other LSPs — downstream, incoming, Spring entrypoints, boxed diagram with intent/action/input/output details, Markdown/DOT/PDF/SVG export (`<leader>ch*`) |
 | **Completion** | `blink.cmp` (Rust-based, faster than nvim-cmp) · `LuaSnip` · `friendly-snippets` |
 | **Debug** | `nvim-dap` + `dap-ui` + `dap-virtual-text` per-language adapters |
 | **Shell extras** | `shell/zshrc.snippet` is sourced from `~/.zshrc` and wires up `eza` / `bat` / `fzf` (Ctrl-R / Ctrl-T / Alt-C) / `zoxide` (`z foo`) / `starship` prompt — all guarded behind `command -v`, so missing tools are silently skipped |
@@ -129,6 +130,26 @@ The script is **idempotent** — safe to re-run. It backs up any existing `~/.co
 | `<Space>cgo` / `<Space>cgO` | Open latest DOT / SVG in floating buffer |
 | `<Space>cgy` / `<Space>cgY` | Yank latest DOT / SVG to clipboard (paste into AI) |
 | `<Space>cgT` | Module dependency graph |
+
+### Call hierarchy (`<Space>ch*`, requires LSP callHierarchy support)
+
+| Key | Action |
+|---|---|
+| `<Space>cho` | Downstream call hierarchy from the method under cursor |
+| `<Space>chi` | Incoming callers hierarchy for the method under cursor |
+| `<Space>che` | Spring entrypoint picker → in-editor ASCII business graph + downstream tree |
+| `<Space>chg` | In-editor ASCII business graph from the method under cursor |
+| `<Space>chd` | Boxed ASCII diagram from the method under cursor; boxes wrap at about 60% of editor width |
+| `G` in tree | Render the current chain as a compact Neovim ASCII graph with explicit arrows and method summaries |
+| `A` in tree/graph | Render the current chain as a boxed ASCII diagram with role colors and intent/action/input/output details |
+| `E` in tree/graph | Start or refresh the bottom AI call audit panel for the current chain |
+| `S` in tree/graph/audit | Stop the running AI audit stream |
+| `C` in tree/graph/audit | Copy the current AI audit report |
+| `<CR>` in audit evidence | Jump to the referenced source location |
+| `[` / `]` in audit | Move to previous / next evidence item |
+| `P` in tree | Render the current chain as PDF/SVG with Graphviz and open the PDF |
+| `y` in tree | Copy Markdown chain to clipboard; in the ASCII graph, copy the graph text |
+| `Y` in tree | Copy DOT graph to clipboard and write a `/tmp/dora-call-hierarchy-*.dot` file |
 
 ### Editing power tools
 

@@ -31,16 +31,13 @@ return {
     lazy = false,
     priority = 1000,
     opts = {
-      variant = "auto",     -- main (dark) / moon (medium) / dawn (light)
+      variant = "dawn",     -- main (dark) / moon (medium) / dawn (light)
       dark_variant = "main",
       styles = {
         bold = false,
         italic = true,
-        -- transparency = false: rose-pine paints its signature warm cream
-        -- background. Combined with neovide_opacity = 0.85 and
-        -- window_blurred = true, that warm color is what you see —
-        -- a "warm tinted frosted glass" instead of the default white
-        -- macOS vibrancy material.
+        -- Keep rose-pine's warm dawn base in the grid; Neovide applies only a
+        -- light outer opacity/blur layer so text contrast stays predictable.
         transparency = false,
       },
     },

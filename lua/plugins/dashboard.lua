@@ -8,16 +8,16 @@ return {
       local date = os.date("%A · %d %B")  -- e.g. "Sunday · 27 April"
 
       opts.dashboard = vim.tbl_deep_extend("force", opts.dashboard or {}, {
-        width = 60,
+        width = 64,
         preset = {
           header = table.concat({
             "",
-            "███╗   ██╗██╗  ██╗██╗   ██╗ ██████╗",
-            "████╗  ██║██║  ██║╚██╗ ██╔╝██╔════╝",
-            "██╔██╗ ██║███████║ ╚████╔╝ ██║     ",
-            "██║╚██╗██║██╔══██║  ╚██╔╝  ██║     ",
-            "██║ ╚████║██║  ██║   ██║   ╚██████╗",
-            "╚═╝  ╚═══╝╚═╝  ╚═╝   ╚═╝    ╚═════╝",
+            "    ____                                      __",
+            "   / __ \\____ ___  ______ ___  ____  ____  ____/ /",
+            "  / /_/ / __ `/ / / / __ `__ \\/ __ \\/ __ \\/ __  / ",
+            " / _, _/ /_/ / /_/ / / / / / / /_/ / / / / /_/ /  ",
+            "/_/ |_|\\__,_/\\__, /_/ /_/ /_/\\____/_/ /_/\\__,_/   ",
+            "            /____/        N V I M                 ",
           }, "\n"),
           keys = {
             { key = "f", desc = "Find File",       action = ":lua Snacks.dashboard.pick('files')" },
@@ -46,7 +46,7 @@ return {
             text = {
               { "─── ", hl = "SnacksDashboardDir" },
               { date, hl = "SnacksDashboardTitle" },
-              { " · Happy Coding ───", hl = "SnacksDashboardDir" },
+              { " · rose-pine-dawn · Neovide ───", hl = "SnacksDashboardDir" },
             },
             align = "center",
             padding = 2,

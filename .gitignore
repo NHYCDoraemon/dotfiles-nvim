@@ -5,7 +5,9 @@ debug
 .repro
 foo.*
 *.log
+.DS_Store
 data
+.superpowers/
 
 # Local secrets / machine-specific env (never commit)
 shell/.env

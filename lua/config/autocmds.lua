@@ -54,6 +54,60 @@ local function ide_semantic_styles()
   end
 end
 
+-- Neovide-only rose-pine-dawn polish: keep plugin behavior unchanged, but make
+-- floating surfaces, menus and the dashboard read as one soft-glass layer.
+local function neovide_soft_glass_highlights()
+  if not vim.g.neovide then return end
+  if not (vim.g.colors_name or ""):match("^rose%-pine") then return end
+
+  local ok, pal = pcall(require, "rose-pine.palette")
+  if not ok then return end
+
+  local surface = pal.surface or pal.base
+  local overlay = pal.overlay or surface
+  local low = pal.highlight_low or surface
+  local med = pal.highlight_med or overlay
+  local high = pal.highlight_high or overlay
+  local muted = pal.muted or pal.subtle or pal.text
+  local set = vim.api.nvim_set_hl
+
+  set(0, "NormalFloat", { fg = pal.text, bg = surface })
+  set(0, "FloatBorder", { fg = high, bg = surface })
+  set(0, "FloatTitle", { fg = pal.rose, bg = surface })
+  set(0, "WinSeparator", { fg = low, bg = pal.base })
+
+  set(0, "Pmenu", { fg = pal.text, bg = surface })
+  set(0, "PmenuSel", { fg = pal.text, bg = med })
+  set(0, "PmenuSbar", { bg = low })
+  set(0, "PmenuThumb", { bg = high })
+
+  set(0, "NoiceCmdlinePopup", { fg = pal.text, bg = surface })
+  set(0, "NoiceCmdlinePopupBorder", { fg = pal.iris, bg = surface })
+  set(0, "NoiceCmdlineIcon", { fg = pal.iris, bg = surface })
+  set(0, "NoiceConfirmBorder", { fg = pal.rose, bg = surface })
+  set(0, "NoiceMini", { fg = muted, bg = surface })
+
+  set(0, "BlinkCmpDoc", { fg = pal.text, bg = surface })
+  set(0, "BlinkCmpDocBorder", { fg = high, bg = surface })
+  set(0, "BlinkCmpDocSeparator", { bg = surface })
+
+  set(0, "NotifyINFOBorder", { fg = pal.foam, bg = surface })
+  set(0, "NotifyWARNBorder", { fg = pal.gold, bg = surface })
+  set(0, "NotifyERRORBorder", { fg = pal.love, bg = surface })
+  set(0, "NotifyDEBUGBorder", { fg = muted, bg = surface })
+  set(0, "NotifyTRACEBorder", { fg = pal.iris, bg = surface })
+  for _, level in ipairs({ "INFO", "WARN", "ERROR", "DEBUG", "TRACE" }) do
+    set(0, "Notify" .. level .. "Body", { fg = pal.text, bg = surface })
+  end
+
+  set(0, "SnacksDashboardHeader", { fg = pal.rose })
+  set(0, "SnacksDashboardTitle", { fg = pal.foam })
+  set(0, "SnacksDashboardDesc", { fg = pal.text })
+  set(0, "SnacksDashboardSpecial", { fg = pal.iris })
+  set(0, "SnacksDashboardDir", { fg = muted })
+  set(0, "SnacksDashboardFooter", { fg = muted })
+end
+
 vim.api.nvim_create_autocmd("ColorScheme", {
   group = vim.api.nvim_create_augroup("user_ide_semantic_styles", { clear = true }),
   -- schedule so this runs AFTER the colorscheme's own synchronous highlight setup
@@ -61,6 +115,12 @@ vim.api.nvim_create_autocmd("ColorScheme", {
 })
 -- Apply once now in case the colorscheme already loaded before this registered.
 vim.schedule(ide_semantic_styles)
+
+vim.api.nvim_create_autocmd("ColorScheme", {
+  group = vim.api.nvim_create_augroup("user_neovide_soft_glass_highlights", { clear = true }),
+  callback = vim.schedule_wrap(neovide_soft_glass_highlights),
+})
+vim.schedule(neovide_soft_glass_highlights)
 -- e.g. vim.api.nvim_del_augroup_by_name("lazyvim_wrap_spell")
 
 -- Disable LazyVim's default `vim.opt_local.spell = true` on markdown / text /

@@ -126,19 +126,13 @@ end
 -- Ghostty's font config does NOT apply to Neovide; use vim's guifont here.
 -- ============================================================================
 if vim.g.neovide then
-  -- Font: JetBrainsMono Nerd Font Propo — IDEA's own font, so rendering/weight
-  -- matches IDEA. It ships a REAL italic face, so italics (comments / keywords /
-  -- static & abstract members) actually render in Neovide — Neovide does NOT
-  -- synthesize oblique for fonts that lack one (which is why Liga Comic Mono,
-  -- our earlier font, showed no italics). "Propo" = proportional Nerd Font icon
-  -- glyphs (the code text stays monospaced; only icons are proportional).
+  -- Font: keep the same Liga face as terminal nvim, with a little extra
+  -- line-height so the rounded/comic glyphs do not feel cramped in Neovide.
   -- Single family (no comma fallback) — Neovide's guifont parser sometimes
   -- treats a comma-separated string as one missing name and falls back to the
   -- system default.
   -- Browse / change interactively with `<leader>uf` (FONTS picker in keymaps.lua).
-  vim.o.guifont = "JetBrainsMono Nerd Font Propo:h16"
-  -- 4px linespace for breathing room (was tuned for Comic Mono; fine for
-  -- Cascadia too — lower it toward 2 if lines feel too loose).
+  vim.o.guifont = "Liga Comic Mono:h16"
   vim.opt.linespace = 4
   -- CJK characters use a dedicated font slot — `guifont` fallback chains are
   -- buggy in Neovide (see comment above), but `guifontwide` is a separate
@@ -153,55 +147,54 @@ if vim.g.neovide then
   -- This line is kept for documentation / non-macOS platforms only.
   vim.g.neovide_frame          = "buttonless"
 
-  vim.g.neovide_padding_top    = 8
-  vim.g.neovide_padding_bottom = 8
-  vim.g.neovide_padding_left   = 8
-  vim.g.neovide_padding_right  = 8
+  vim.g.neovide_padding_top    = 12
+  vim.g.neovide_padding_bottom = 12
+  vim.g.neovide_padding_left   = 12
+  vim.g.neovide_padding_right  = 12
   vim.g.neovide_remember_window_size = true
 
   -- macOS Cmd-key forwarding (so our IDEA <D-…> keymaps work natively).
   vim.g.neovide_input_use_logo = true
   vim.g.neovide_input_macos_option_key_is_meta = "only_left"
 
-  -- Transparency / vibrancy: REMOVED.
-  -- We tried opacity + window_blurred for a "frosted glass" feel but macOS
-  -- native fullscreen breaks vibrancy (the fullscreen Space has no desktop
-  -- behind it, so NSVisualEffectView renders as a flat gray box). Defaults
-  -- (opacity = 1.0, window_blurred = false, floating_blur_amount = 2.0)
-  -- look the same in windowed and fullscreen and don't have that issue.
+  -- Soft glass: keep rose-pine-dawn's warm base visible, then let Neovide add
+  -- a conservative amount of system blur. 0.96 avoids the washed-out gray look
+  -- that stronger opacity caused in macOS fullscreen.
+  vim.g.neovide_opacity                = 0.96
+  vim.g.neovide_normal_opacity         = 0.96
+  vim.g.neovide_window_blurred         = true
+  vim.g.neovide_floating_blur_amount_x = 2.0
+  vim.g.neovide_floating_blur_amount_y = 2.0
 
   -- Smooth cursor: Neovide handles this natively at pixel level — no smear-cursor
   -- artifacts like in terminal mode. cursor_smooth_blink turns the
   -- guicursor blinkon/blinkoff (set in vim.opt.guicursor above) into
   -- smooth fades = breathing.
-  -- animation_length 0.08 gives the cursor enough travel time for the
-  -- trail/particles to actually be visible (0.05-0.06 felt instant — trail
-  -- finished before the eye caught it). trail_size 1.0 = full smear length.
+  -- Keep the GUI cursor trail visible; lower values disappear on dawn's light
+  -- background and make Neovide feel like plain terminal nvim.
   vim.g.neovide_cursor_animation_length       = 0.08
-  vim.g.neovide_cursor_trail_size             = 1.0   -- was 0.7: maximum smear
+  vim.g.neovide_cursor_trail_size             = 1.0
   vim.g.neovide_cursor_animate_in_insert_mode = true
   vim.g.neovide_cursor_smooth_blink           = true
 
   -- Cursor particle effect — pixie-dust trail behind cursor when moving.
   -- Modes: "" (off) | "railgun" | "torpedo" | "pixiedust" | "sonicboom"
   --        | "ripple" | "wireframe"
-  -- particle_lifetime 2.5 + density 20 makes the trail visibly linger
-  -- behind the cursor instead of vanishing in a frame.
   vim.g.neovide_cursor_vfx_mode              = "pixiedust"
-  vim.g.neovide_cursor_vfx_particle_density  = 20.0   -- was 16
+  vim.g.neovide_cursor_vfx_particle_density  = 20.0
   vim.g.neovide_cursor_vfx_particle_speed    = 18.0
-  vim.g.neovide_cursor_vfx_particle_lifetime = 2.5    -- was 1.8 — linger longer
-  vim.g.neovide_cursor_vfx_opacity           = 240.0  -- was 220 — punchier
+  vim.g.neovide_cursor_vfx_particle_lifetime = 2.5
+  vim.g.neovide_cursor_vfx_opacity           = 240.0
 
   -- Floating windows: rounded corners + soft drop shadow (IDE-style depth).
-  vim.g.neovide_floating_corner_radius      = 0.8
+  vim.g.neovide_floating_corner_radius      = 0.9
   vim.g.neovide_floating_shadow             = true
-  vim.g.neovide_floating_z_height           = 10
+  vim.g.neovide_floating_z_height           = 12
   vim.g.neovide_light_angle_degrees         = 45
-  vim.g.neovide_light_radius                = 5
+  vim.g.neovide_light_radius                = 6
 
   -- Smooth scroll (Neovide's renderer makes this flicker-free).
-  vim.g.neovide_scroll_animation_length     = 0.2
+  vim.g.neovide_scroll_animation_length     = 0.16
   -- WITHOUT this, Neovide's default `_far_lines = 1` skips animation for any
   -- scroll movement of more than 1 line — so <C-d>, gg, G, search jumps and
   -- mouse-wheel ticks all teleport instead of animating. 9999 = animate
@@ -226,13 +219,9 @@ if vim.g.neovide then
   -- Quality-of-life polish.
   vim.g.neovide_hide_mouse_when_typing      = true
   vim.g.neovide_confirm_quit                = true
-  vim.g.neovide_theme                       = "auto"  -- follow macOS dark/light
+  vim.g.neovide_theme                       = "light"  -- match rose-pine-dawn
 
-  -- Text rendering. contrast was 0.5 (added stroke weight) — that made glyphs
-  -- read heavier than IDEA/JetBrains rendering, so it's dropped to 0.0 (neutral,
-  -- no artificial weight). gamma stays neutral. NOTE: the bulk of the remaining
-  -- "thickness" is the font itself (Liga Comic Mono is a heavy comic face); for
-  -- a true IDEA look switch to a lighter font via <leader>uf (e.g. JetBrainsMono).
+  -- Text rendering: neutral gamma/contrast so Liga keeps its own weight.
   vim.g.neovide_text_gamma                  = 0.0
   vim.g.neovide_text_contrast               = 0.0
 

@@ -302,12 +302,12 @@ local FONTS = {
   { family = "Monaspace Radon NF",       note = "★ Monaspace Radon — 整字符手写感，文艺向" },
   { family = "RecMonoCasual Nerd Font",  note = "★ Recursive Casual — 手写体最浓" },
   -- ─── 半连笔（小写连大写不连）────────────────────────────────────
-  { family = "Maple Mono NF",            note = "Maple — italic 小写连，大写仅倾斜（current）" },
+  { family = "Maple Mono NF",            note = "Maple — italic 小写连，大写仅倾斜" },
   { family = "RecMonoSmCasual Nerd Font",note = "Recursive Semicasual — 微微手写，更克制" },
   { family = "Monaspace Argon NF",       note = "Monaspace Argon — humanist 偏端正" },
   -- ─── 重连字符号合并（=> ≠ → 等）─────────────────────────────────
   { family = "Lilex Nerd Font",          note = "Lilex — 重 ligature，符号合并多（=> ≡ ≠）" },
-  { family = "Liga Comic Mono",          note = "Liga Comic Mono — 漫画字体（自动加行距，避免太挤）",
+  { family = "Liga Comic Mono",          note = "Liga Comic Mono — 当前默认，漫画字体（自动加行距，避免太挤）",
     linespace = 4 },
   -- ─── 端正派（无连笔）─────────────────────────────────────────────
   { family = "GeistMono Nerd Font",      note = "Vercel Geist — minimal, modern" },

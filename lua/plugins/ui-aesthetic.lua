@@ -41,7 +41,7 @@ return {
           position = { row = "40%", col = "50%" },
           size = { width = 60, height = "auto" },
           border = { style = "rounded" },
-          win_options = { winhighlight = { Normal = "Normal", FloatBorder = "DiagnosticInfo" } },
+          win_options = { winhighlight = { Normal = "NormalFloat", FloatBorder = "FloatBorder" } },
         },
 
         -- LSP hover (K). PURELY cosmetic: rounded border, 1-col side padding,
@@ -54,7 +54,7 @@ return {
           win_options = {
             wrap = true,
             linebreak = true,
-            winhighlight = { FloatBorder = "DiagnosticInfo" },
+            winhighlight = { Normal = "NormalFloat", FloatBorder = "FloatBorder" },
           },
         },
 
@@ -65,7 +65,7 @@ return {
           win_options = {
             wrap = true,
             linebreak = true,
-            winhighlight = { FloatBorder = "DiagnosticHint" },
+            winhighlight = { Normal = "NormalFloat", FloatBorder = "FloatBorder" },
           },
         },
       },
@@ -78,6 +78,7 @@ return {
       timeout = 3000,
       max_height = function() return math.floor(vim.o.lines * 0.75) end,
       max_width  = function() return math.floor(vim.o.columns * 0.75) end,
+      background_colour = "#faf4ed",
       stages = "fade",
       render = "compact",
       top_down = false,
