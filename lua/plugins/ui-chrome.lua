@@ -1,32 +1,10 @@
 return {
-  -- File tabs (top).
-  {
-    "akinsho/bufferline.nvim",
-    opts = {
-      options = {
-        mode = "buffers",
-        themable = true,
-        numbers = "none",
-        diagnostics = "nvim_lsp",
-        diagnostics_indicator = function(_, _, diag)
-          local icons = require("lazyvim.config").icons.diagnostics
-          local ret = (diag.error and icons.Error .. diag.error .. " " or "")
-            .. (diag.warning and icons.Warn .. diag.warning or "")
-          return vim.trim(ret)
-        end,
-        offsets = {
-          { filetype = "snacks_layout_box", text = "Project", text_align = "left", separator = true },
-          { filetype = "Outline", text = "Structure", text_align = "left", separator = true },
-        },
-        show_buffer_close_icons = true,
-        show_close_icon = false,
-        separator_style = "slant",
-        always_show_bufferline = true,
-        indicator = { style = "underline" },
-        modified_icon = "●",
-      },
-    },
-  },
+  -- File tabs DISABLED. Running nvim as a read-focused viewer — switch files
+  -- via pickers (Find File / Recent Files) instead of a top tab bar. This also
+  -- removes bufferline's `BufferLineFill` strip, the gray bar that read like a
+  -- leftover title bar. showtabline is forced to 0 in config/options.lua so no
+  -- tabline renders at all.
+  { "akinsho/bufferline.nvim", enabled = false },
 
   -- Breadcrumb (sticky path/class/method line).
   {

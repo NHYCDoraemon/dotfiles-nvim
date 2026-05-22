@@ -83,7 +83,7 @@ return {
   },
 
   -- Default colorscheme at LazyVim level.
-  -- rose-pine-dawn = rose-pine 的 light 变体，暖暮粉色调，最对"文艺简约"的诉求。
+  -- rose-pine-dawn = rose-pine 的 light 变体，暖暮粉色调，文艺简约。
   -- 切到其他主题用 <leader>uC（picker）；rose-pine main/dawn 互切用 <leader>uL。
   {
     "LazyVim/LazyVim",

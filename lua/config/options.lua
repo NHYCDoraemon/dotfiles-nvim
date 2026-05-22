@@ -9,6 +9,7 @@ local opt = vim.opt
 -- IDEA-style window chrome.
 opt.cmdheight = 0           -- hide cmdline when not in use; noice will float it
 opt.laststatus = 3          -- one global statusline (cleaner)
+opt.showtabline = 0         -- no top tab bar (bufferline disabled; read-focused)
 opt.scrolloff = 8           -- keep 8 lines of context above/below cursor
 opt.sidescrolloff = 12
 opt.signcolumn = "yes:1"    -- always show sign column to prevent jitter
@@ -125,22 +126,33 @@ end
 -- Ghostty's font config does NOT apply to Neovide; use vim's guifont here.
 -- ============================================================================
 if vim.g.neovide then
-  -- Font: same family + size as Ghostty config so the visual is consistent.
+  -- Font: JetBrainsMono Nerd Font Propo — IDEA's own font, so rendering/weight
+  -- matches IDEA. It ships a REAL italic face, so italics (comments / keywords /
+  -- static & abstract members) actually render in Neovide — Neovide does NOT
+  -- synthesize oblique for fonts that lack one (which is why Liga Comic Mono,
+  -- our earlier font, showed no italics). "Propo" = proportional Nerd Font icon
+  -- glyphs (the code text stays monospaced; only icons are proportional).
   -- Single family (no comma fallback) — Neovide's guifont parser sometimes
-  -- treats the whole comma-separated string as one missing font name and
-  -- falls back to the system default. Liga Comic Mono includes all Nerd
-  -- Font icon glyphs, so a fallback chain isn't needed. Liga is thick, so
-  -- we add 4px linespace globally for breathing room (matches the per-font
-  -- override in the <leader>uf picker).
+  -- treats a comma-separated string as one missing name and falls back to the
+  -- system default.
   -- Browse / change interactively with `<leader>uf` (FONTS picker in keymaps.lua).
-  vim.o.guifont = "Liga Comic Mono:h16"
+  vim.o.guifont = "JetBrainsMono Nerd Font Propo:h16"
+  -- 4px linespace for breathing room (was tuned for Comic Mono; fine for
+  -- Cascadia too — lower it toward 2 if lines feel too loose).
   vim.opt.linespace = 4
   -- CJK characters use a dedicated font slot — `guifont` fallback chains are
   -- buggy in Neovide (see comment above), but `guifontwide` is a separate
   -- option built specifically for East Asian double-width chars.
   vim.o.guifontwide = "Source Han Sans VF:h16"
 
-  -- Window chrome
+  -- Window chrome: fully frameless (no title bar / traffic-light buttons).
+  -- IMPORTANT: on macOS this `vim.g.neovide_frame` is IGNORED — it's read
+  -- after nvim starts, by which point the NSWindow already exists. The frame
+  -- is actually controlled by ~/.config/neovide/config.toml (`frame = "none"`),
+  -- which Neovide reads at process startup before creating the window.
+  -- This line is kept for documentation / non-macOS platforms only.
+  vim.g.neovide_frame          = "buttonless"
+
   vim.g.neovide_padding_top    = 8
   vim.g.neovide_padding_bottom = 8
   vim.g.neovide_padding_left   = 8
@@ -198,10 +210,17 @@ if vim.g.neovide then
   -- Window position animation (when nvim moves/resizes splits).
   vim.g.neovide_position_animation_length   = 0.10
 
-  -- Refresh rate — match ProMotion (120Hz on M-series MacBook Pro / Studio
-  -- Display Pro). Falls back fine on 60Hz panels. Lower idle rate saves
-  -- battery when nothing is changing.
-  vim.g.neovide_refresh_rate                = 120
+  -- Refresh rate — capped at 30Hz on purpose.
+  --
+  -- The breathing cursor (smooth_blink + an always-on blinkon/blinkoff in
+  -- guicursor) is a PERPETUAL fade animation that never settles, so Neovide
+  -- never reaches its idle state — `_refresh_rate_idle` effectively never
+  -- applies, and it would otherwise render at the full active rate forever,
+  -- pegging a CPU core at 100%. Capping the active rate at 30 keeps the
+  -- breathing effect while cutting the continuous render cost ~4x.
+  -- (If you ever drop the breathing cursor, you can safely raise this back
+  --  to 120 for ProMotion-smooth scrolling, since idle would then kick in.)
+  vim.g.neovide_refresh_rate                = 30
   vim.g.neovide_refresh_rate_idle           = 30
 
   -- Quality-of-life polish.
@@ -209,10 +228,12 @@ if vim.g.neovide then
   vim.g.neovide_confirm_quit                = true
   vim.g.neovide_theme                       = "auto"  -- follow macOS dark/light
 
-  -- Text rendering: subtle gamma + contrast tweaks for sharper glyphs on
-  -- retina displays (defaults are conservative; 0.5 contrast gives strokes
-  -- a touch more weight without going bold).
+  -- Text rendering. contrast was 0.5 (added stroke weight) — that made glyphs
+  -- read heavier than IDEA/JetBrains rendering, so it's dropped to 0.0 (neutral,
+  -- no artificial weight). gamma stays neutral. NOTE: the bulk of the remaining
+  -- "thickness" is the font itself (Liga Comic Mono is a heavy comic face); for
+  -- a true IDEA look switch to a lighter font via <leader>uf (e.g. JetBrainsMono).
   vim.g.neovide_text_gamma                  = 0.0
-  vim.g.neovide_text_contrast               = 0.5
+  vim.g.neovide_text_contrast               = 0.0
 
 end

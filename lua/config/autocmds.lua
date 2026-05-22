@@ -5,6 +5,62 @@
 -- with `vim.api.nvim_create_autocmd`
 --
 -- Or remove existing autocmds by their group name (which is prefixed with `lazyvim_` for the defaults)
+
+-- ============================================================================
+-- IDE-style italics on STATIC and ABSTRACT members (like IntelliJ / GoLand).
+--
+-- IDEA italicizes static fields, static methods and abstract members — info
+-- that treesitter can't see (it's semantic, not syntactic). LSP semantic tokens
+-- carry the `static` / `abstract` modifiers, which Neovim exposes as the
+-- `@lsp.typemod.<type>.<mod>` and `@lsp.mod.<mod>` highlight groups.
+--
+-- We set ONLY `italic = true` on those groups (no fg): the base colour still
+-- comes from the `@lsp.type.<type>` extmark, and Neovim merges the two
+-- overlapping highlights, so a static method keeps its colour AND gets italic.
+-- Re-applied on every ColorScheme so it survives <leader>uC theme switches and
+-- works regardless of theme (the per-theme italic config in colorscheme.lua
+-- only covers catppuccin/kanagawa; this is theme-independent).
+local function ide_semantic_styles()
+  -- (1) STATIC + ABSTRACT members → italic. IDEA italicizes these; treesitter
+  -- can't see "static"/"abstract" (semantic, not syntactic) so we ride the LSP
+  -- semantic-token groups. Only `italic` is set (no fg) — the colour still
+  -- comes from the `@lsp.type.*` extmark and Neovim merges the two.
+  for _, g in ipairs({
+    "@lsp.typemod.method.static",
+    "@lsp.typemod.function.static",
+    "@lsp.typemod.property.static",
+    "@lsp.typemod.variable.static",
+    "@lsp.typemod.method.abstract",
+    "@lsp.typemod.class.abstract",
+    "@lsp.mod.abstract",
+  }) do
+    vim.api.nvim_set_hl(0, g, { italic = true })
+  end
+
+  -- (2) instance FIELDS → purple, and (3) PARAMETERS → neutral & non-italic.
+  -- IDEA's signature is purple fields with plain parameters. rose-pine ships
+  -- the opposite (parameters get iris + italic, fields are uncoloured), so on
+  -- rose-pine we swap: fields take iris, parameters drop to the body text
+  -- colour with no italic. Colours come from the ACTIVE rose-pine variant
+  -- (main/dawn/moon), so <leader>uL toggles stay correct. Gated to rose-pine
+  -- so other themes (via <leader>uC) keep their own palette.
+  if (vim.g.colors_name or ""):match("^rose%-pine") then
+    local ok, pal = pcall(require, "rose-pine.palette")
+    if ok then
+      vim.api.nvim_set_hl(0, "@lsp.type.property", { fg = pal.iris })           -- fields → purple
+      vim.api.nvim_set_hl(0, "@lsp.type.parameter", { fg = pal.text })          -- params → neutral, no italic
+      vim.api.nvim_set_hl(0, "@variable.parameter", { fg = pal.text })
+    end
+  end
+end
+
+vim.api.nvim_create_autocmd("ColorScheme", {
+  group = vim.api.nvim_create_augroup("user_ide_semantic_styles", { clear = true }),
+  -- schedule so this runs AFTER the colorscheme's own synchronous highlight setup
+  callback = vim.schedule_wrap(ide_semantic_styles),
+})
+-- Apply once now in case the colorscheme already loaded before this registered.
+vim.schedule(ide_semantic_styles)
 -- e.g. vim.api.nvim_del_augroup_by_name("lazyvim_wrap_spell")
 
 -- Disable LazyVim's default `vim.opt_local.spell = true` on markdown / text /
@@ -13,12 +69,34 @@
 pcall(vim.api.nvim_del_augroup_by_name, "lazyvim_wrap_spell")
 
 -- Re-add only the wrap-line behavior (without the spell side-effect).
+-- NOTE: markdown is intentionally NOT in this list — see the nowrap autocmd
+-- just below for why.
 vim.api.nvim_create_autocmd("FileType", {
   group = vim.api.nvim_create_augroup("user_text_wrap", { clear = true }),
-  pattern = { "text", "plaintex", "typst", "gitcommit", "markdown" },
+  pattern = { "text", "plaintex", "typst", "gitcommit" },
   callback = function()
     vim.opt_local.wrap = true
     vim.opt_local.spell = false
+  end,
+})
+
+-- Force `nowrap` on markdown buffers — REQUIRED for markview table rendering.
+-- markview's table renderer bails out when the window has `wrap = true` (its
+-- own source comments "BUG, wrap breaks table rendering"). With the global
+-- `wrap = true` (set in options.lua), any table wider than the window would
+-- soft-wrap and silently fall back to raw `| --- |` text, while narrow tables
+-- that fit kept rendering — the "some tables render, some don't" symptom.
+-- nowrap lets every table render; the few overly-long prose lines just scroll
+-- horizontally. Also kill spell here (markdown isn't in user_text_wrap anymore).
+vim.api.nvim_create_autocmd("FileType", {
+  group = vim.api.nvim_create_augroup("user_markdown_nowrap", { clear = true }),
+  pattern = "markdown",
+  callback = function()
+    vim.opt_local.wrap = false
+    vim.opt_local.spell = false
+    -- No column-width guide line on prose — the global colorcolumn=100 (a
+    -- vertical line for code line-width) just clutters markdown reading.
+    vim.opt_local.colorcolumn = ""
   end,
 })
 

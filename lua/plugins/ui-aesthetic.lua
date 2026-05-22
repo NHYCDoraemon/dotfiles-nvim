@@ -43,6 +43,31 @@ return {
           border = { style = "rounded" },
           win_options = { winhighlight = { Normal = "Normal", FloatBorder = "DiagnosticInfo" } },
         },
+
+        -- LSP hover (K). PURELY cosmetic: rounded border, 1-col side padding,
+        -- max 100 cols wide so prose wraps cleanly.
+        -- IMPORTANT: do NOT set conceallevel / concealcursor here — jdtls
+        -- can return raw HTML fragments (<p>/<li>) and conceal eats them.
+        hover = {
+          border = { style = "rounded", padding = { 0, 1 } },
+          size = { max_width = 100 },
+          win_options = {
+            wrap = true,
+            linebreak = true,
+            winhighlight = { FloatBorder = "DiagnosticInfo" },
+          },
+        },
+
+        -- Signature help — narrower since signatures are usually short.
+        signature = {
+          border = { style = "rounded", padding = { 0, 1 } },
+          size = { max_width = 80 },
+          win_options = {
+            wrap = true,
+            linebreak = true,
+            winhighlight = { FloatBorder = "DiagnosticHint" },
+          },
+        },
       },
     },
   },

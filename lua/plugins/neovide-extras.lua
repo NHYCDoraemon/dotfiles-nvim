@@ -58,6 +58,7 @@ return {
   --   nicely with Neovide's GPU smooth scroll.
   {
     "lewis6991/satellite.nvim",
+    enabled = false,        -- right-side scrollbar disabled — read-focused, no need.
     event = "BufReadPost",
     dependencies = { "lewis6991/gitsigns.nvim" },
     opts = {
