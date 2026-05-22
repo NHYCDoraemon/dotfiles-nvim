@@ -1,7 +1,7 @@
--- Inline "X references" above every function / method / class in the buffer.
+-- Inline "X usages" above every function / method / class in the buffer.
 -- Works for ANY LSP that supports textDocument/references — Go, Rust, Python,
--- TypeScript, Lua, etc. (Java already gets it natively via jdtls codelens, so
--- we exclude .java to avoid double-rendering.)
+-- TypeScript, Lua, Java, etc. Java's native jdtls reference CodeLens is
+-- disabled in lang-java.lua so this remains the single usage-count renderer.
 return {
   {
     "Wansmer/symbol-usage.nvim",
@@ -38,10 +38,13 @@ return {
           vim.lsp.protocol.SymbolKind.Interface,
         },
 
-        -- Tweak: skip noisy filetypes + already-instrumented Java.
-        filetypes = {
-          java = { kinds = false },  -- jdtls codelens already shows refs
-        },
+        -- Java is included: IDEA's inline usage counts are exactly what we
+        -- want to match, so symbol-usage handles Java and jdtls CodeLens does
+        -- not render duplicate "N references" labels.
+        -- NOTE: to exclude a filetype, use `disable.filetypes` (NOT
+        -- `filetypes.java = { kinds = false }` — that merges `false` into
+        -- self.opts.kinds and crashes worker.lua's vim.tbl_contains).
+        disable = { filetypes = {} },
 
         -- Throttle requests so big files don't spam the LSP.
         request_pending_text = "···",
