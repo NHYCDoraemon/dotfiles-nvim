@@ -2,6 +2,7 @@ vim.opt.runtimepath:append(vim.fn.getcwd())
 package.path = vim.fn.getcwd() .. "/lua/?.lua;" .. vim.fn.getcwd() .. "/lua/?/init.lua;" .. package.path
 
 local graph = require("dora.call_hierarchy")
+local audit = require("dora.call_audit")
 
 local function assert_eq(actual, expected, label)
   if actual ~= expected then
@@ -361,4 +362,40 @@ run("finds Java method declaration after Spring annotation", function()
   }
 
   assert_eq(graph.find_next_java_method_line(lines, 1), 3)
+end)
+
+run("closes hierarchy graph and audit windows at once", function()
+  vim.cmd("enew")
+  local base_win = vim.api.nvim_get_current_win()
+  local root = graph.new_node(item("execute", "com.demo.ForceClaimService", "/repo/src/ForceClaimService.java", 10), 0)
+  root.children = {
+    graph.new_node(item("requireMutationContext", "com.demo.AdminOperationGuard", "/repo/src/AdminOperationGuard.java", 15), 1),
+  }
+
+  graph.open_buffer(root, { direction = "outgoing", title = "Downstream Call Hierarchy" })
+  graph.render_ascii_diagram(root, { direction = "outgoing", title = "Business ASCII Diagram" })
+  audit.open(root, {
+    start = false,
+    graph = graph,
+    diagram_lines = { "Business ASCII Diagram", "[服务] ForceClaimService.execute" },
+    provider = "claude",
+  })
+
+  local function managed_window_count()
+    local count = 0
+    for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+      local buf = vim.api.nvim_win_get_buf(win)
+      local ft = vim.bo[buf].filetype
+      local name = vim.api.nvim_buf_get_name(buf)
+      if ft == "call_hierarchy" or ft == "call_hierarchy_graph" or ft == "call_audit" or name:match("Call Audit") then
+        count = count + 1
+      end
+    end
+    return count
+  end
+
+  assert_eq(managed_window_count() >= 5, true, "test opens hierarchy graph and audit windows")
+  graph.close_all()
+  assert_eq(managed_window_count(), 0, "close_all closes every managed hierarchy/audit window")
+  assert_eq(vim.api.nvim_win_is_valid(base_win), true, "close_all leaves the original editing window available")
 end)

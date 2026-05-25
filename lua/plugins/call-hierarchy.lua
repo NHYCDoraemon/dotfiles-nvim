@@ -62,6 +62,13 @@ return {
         desc = "Call hierarchy: ASCII diagram from cursor",
         ft = { "java", "go", "rust", "typescript", "javascript", "python", "lua" },
       },
+      {
+        "<leader>chx",
+        function()
+          require("dora.call_hierarchy").close_all()
+        end,
+        desc = "Call hierarchy: close all panels",
+      },
     },
   },
 

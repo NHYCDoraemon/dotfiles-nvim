@@ -145,6 +145,7 @@ The script is **idempotent** — safe to re-run. It backs up any existing `~/.co
 | `E` in tree/graph | Start or refresh the bottom AI call audit panel for the current chain |
 | `S` in tree/graph/audit | Stop the running AI audit stream |
 | `C` in tree/graph/audit | Copy the current AI audit report |
+| `<Space>chx` / `Q` in tree/graph/audit | Close every call hierarchy, ASCII/Diagram, and AI audit panel |
 | `<CR>` in audit evidence | Jump to the referenced source location |
 | `[` / `]` in audit | Move to previous / next evidence item |
 | `P` in tree | Render the current chain as PDF/SVG with Graphviz and open the PDF |

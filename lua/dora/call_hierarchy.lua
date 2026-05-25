@@ -971,6 +971,40 @@ end
 
 local jump_to_item
 
+local function is_managed_buffer(buf)
+  if not buf or not vim.api.nvim_buf_is_valid(buf) then return false end
+  local ft = vim.bo[buf].filetype
+  local name = vim.api.nvim_buf_get_name(buf)
+  return ft == "call_hierarchy"
+    or ft == "call_hierarchy_graph"
+    or ft == "call_audit"
+    or name:match("Call Audit") ~= nil
+    or name:match("Call Hierarchy") ~= nil
+end
+
+function M.close_all()
+  local ok, audit = pcall(require, "dora.call_audit")
+  if ok and audit and audit.close then pcall(audit.close) end
+
+  for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+    if vim.api.nvim_win_is_valid(win) then
+      local buf = vim.api.nvim_win_get_buf(win)
+      if is_managed_buffer(buf) then
+        pcall(vim.api.nvim_win_close, win, true)
+      end
+    end
+  end
+
+  for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+    if is_managed_buffer(buf) then
+      line_maps[buf] = nil
+      pcall(vim.api.nvim_buf_delete, buf, { force = true })
+    end
+  end
+
+  vim.notify("Call hierarchy and AI audit panels closed", vim.log.levels.INFO)
+end
+
 local function open_text_buffer(lines, title, line_map)
   local buf = vim.api.nvim_create_buf(false, true)
   vim.bo[buf].buftype = "nofile"
@@ -1072,6 +1106,7 @@ local function open_text_buffer(lines, title, line_map)
   map("<S-Right>", "zL", "Call graph: scroll right faster")
   map("q", "<cmd>close<CR>", "Call graph: close")
   map("<Esc>", "<cmd>close<CR>", "Call graph: close")
+  map("Q", M.close_all, "Call graph: close all hierarchy/audit panels")
   apply_graph_highlights(buf, lines)
   return buf, win
 end
@@ -1278,6 +1313,7 @@ local function set_tree_keymaps(buf)
 
   map("q", "<cmd>close<CR>", "Call hierarchy: close")
   map("<Esc>", "<cmd>close<CR>", "Call hierarchy: close")
+  map("Q", M.close_all, "Call hierarchy: close all hierarchy/audit panels")
 end
 
 local function apply_highlights(buf, lines, line_map)

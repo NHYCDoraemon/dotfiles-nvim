@@ -765,6 +765,15 @@ local function set_panel_keymaps(buf)
     M.close()
   end, "Call audit: close")
 
+  map("Q", function()
+    local ok, graph = pcall(require, "dora.call_hierarchy")
+    if ok and graph and graph.close_all then
+      graph.close_all()
+    else
+      M.close()
+    end
+  end, "Call audit: close all hierarchy/audit panels")
+
   local function locked()
     vim.notify("AI audit panel is locked; close it with q before switching buffers.", vim.log.levels.INFO)
   end
