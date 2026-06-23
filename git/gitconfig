@@ -1,0 +1,24 @@
+[filter "lfs"]
+	clean = git-lfs clean -- %f
+	smudge = git-lfs smudge -- %f
+	process = git-lfs filter-process
+	required = true
+[user]
+	name = NHYCRaymond
+	email = 13810856683@163.com
+[init]
+	defaultBranch = main
+[core]
+	autocrlf = input
+	pager = delta
+[pull]
+	rebase = false
+[interactive]
+	diffFilter = delta --color-only
+[delta]
+	navigate = true
+	line-numbers = true
+	side-by-side = false
+	syntax-theme = Coldark-Dark
+[merge]
+	conflictstyle = zdiff3

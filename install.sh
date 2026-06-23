@@ -11,15 +11,24 @@
 #
 # What it does (idempotent — safe to re-run):
 #   1. Installs Homebrew if missing
-#   2. Installs system deps via brew (neovim, ripgrep, fd, lazygit, JetBrainsMono Nerd Font, Ghostty)
+#   2. Installs system deps via brew (neovim, ripgrep, fd, fzf, bat, eza,
+#      starship, zoxide, git-delta, lazygit, Nerd Fonts, kitty/ghostty/neovide)
 #   3. Installs Rust toolchain (for rust-analyzer)
 #   4. Verifies Node / Python / Java (warns if missing)
 #   5. Backs up any existing ~/.config/nvim and clones this repo
-#   6. Symlinks Kitty config + appends shell-snippet source line to ~/.zshrc
-#   7. Optionally installs Ghostty config (from repo's ghostty/config.example)
-#   8. Runs first :Lazy sync to install plugins
-#   9. Installs LSPs / formatters / DAP via Mason
-#  10. Downloads Lombok agent jar for jdtls (Java)
+#   6. Installs Oh My Zsh + custom plugins (zsh-autosuggestions ghost-text
+#      completion, fzf-tab, zsh-syntax-highlighting, zsh-completions, you-should-use)
+#   7. Symlinks shell & tool configs from the repo (single source of truth):
+#        ~/.zshrc ~/.zprofile ~/.zshenv ~/.config/starship.toml ~/.gitconfig
+#        ~/.config/kitty/kitty.conf ; seeds ~/.zshrc.local from template
+#   8. Optionally installs Ghostty config (from repo's ghostty/config.example)
+#   9. Runs first :Lazy sync to install nvim plugins
+#  10. Installs LSPs / formatters / DAP via Mason
+#  11. Downloads Lombok agent jar for jdtls (Java)
+#
+# Secrets are NEVER committed: put API tokens / private functions in
+# ~/.zshrc.local (gitignored, seeded from shell/zshrc.local.example) or in
+# ~/.config/nvim/shell/.env (gitignored, seeded from shell/.env.example).
 #
 set -euo pipefail
 
@@ -89,6 +98,16 @@ if [[ "${1:-}" == "--upgrade" || "${1:-}" == "-u" ]]; then
   ( cd "$NVIM_CONFIG" && git pull --ff-only )
   ok "repo up to date"
 
+  # Update oh-my-zsh custom plugins (ghost-text completion etc.)
+  ZSH_CUSTOM_PLUGINS="$HOME/.oh-my-zsh/custom/plugins"
+  if [[ -d "$ZSH_CUSTOM_PLUGINS" ]]; then
+    info "updating zsh plugins"
+    for d in "$ZSH_CUSTOM_PLUGINS"/*/; do
+      [[ -d "$d/.git" ]] && git -C "$d" pull --ff-only --quiet 2>/dev/null || true
+    done
+    ok "zsh plugins updated"
+  fi
+
   info "Lazy sync plugins (headless)"
   nvim --headless "+Lazy! sync" +qa 2>&1 | tail -3 || true
   ok "plugins synced"
@@ -137,8 +156,12 @@ BREW_FORMULAE=(
   neovim          # editor itself
   ripgrep         # snacks.picker live grep
   fd              # snacks.picker file finder
-  fzf             # general-purpose fuzzy finder (also used by some plugins)
+  fzf             # general-purpose fuzzy finder (also used by fzf-tab zsh plugin)
   bat             # cat with syntax-highlighted previews
+  eza             # modern ls replacement (ls/ll/la/lt aliases in zshrc.snippet)
+  starship        # cross-shell prompt (config: starship/starship.toml)
+  zoxide          # smarter cd (`z foo`)
+  git-delta       # syntax-highlighted git diffs (configured in git/gitconfig)
 
   # Git ecosystem
   lazygit         # <leader>gg TUI
@@ -354,25 +377,89 @@ if [[ -f "$KITTY_SRC" ]]; then
   fi
 fi
 
-step "Shell snippet (nvd helper + .env loader)"
-SHELL_SNIPPET="$NVIM_CONFIG/shell/zshrc.snippet"
-ZSHRC="$HOME/.zshrc"
-SOURCE_LINE="[ -f \"\$HOME/.config/nvim/shell/zshrc.snippet\" ] && . \"\$HOME/.config/nvim/shell/zshrc.snippet\""
-if [[ -f "$SHELL_SNIPPET" ]]; then
-  if [[ -f "$ZSHRC" ]] && grep -Fq "shell/zshrc.snippet" "$ZSHRC"; then
-    ok "~/.zshrc already sources shell/zshrc.snippet"
+# ----------------------------------------------------------------------------
+# Oh My Zsh framework + custom plugins (the inline ghost-text completion,
+# fzf-powered Tab menu, syntax highlighting, etc.)
+# ----------------------------------------------------------------------------
+step "Oh My Zsh framework"
+ZSH_DIR="$HOME/.oh-my-zsh"
+if [[ -d "$ZSH_DIR" ]]; then
+  ok "oh-my-zsh already installed"
+else
+  info "installing oh-my-zsh (unattended, keeping our own .zshrc)..."
+  # RUNZSH=no  → don't drop us into a new shell
+  # KEEP_ZSHRC=yes → never touch ~/.zshrc (we symlink our own below)
+  RUNZSH=no KEEP_ZSHRC=yes CHSH=no \
+    sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
+  ok "oh-my-zsh installed"
+fi
+
+step "Zsh plugins (autosuggestions / fzf-tab / syntax-highlighting / completions)"
+ZSH_CUSTOM_PLUGINS="$ZSH_DIR/custom/plugins"
+mkdir -p "$ZSH_CUSTOM_PLUGINS"
+# name|repo — clone if absent, otherwise pull latest (idempotent).
+ZSH_PLUGINS=(
+  "zsh-autosuggestions|https://github.com/zsh-users/zsh-autosuggestions"
+  "fzf-tab|https://github.com/Aloxaf/fzf-tab"
+  "zsh-syntax-highlighting|https://github.com/zsh-users/zsh-syntax-highlighting"
+  "zsh-completions|https://github.com/zsh-users/zsh-completions"
+  "you-should-use|https://github.com/MichaelAquilina/zsh-you-should-use"
+)
+for entry in "${ZSH_PLUGINS[@]}"; do
+  name="${entry%%|*}"; repo="${entry##*|}"
+  dest="$ZSH_CUSTOM_PLUGINS/$name"
+  if [[ -d "$dest/.git" ]]; then
+    git -C "$dest" pull --ff-only --quiet 2>/dev/null && ok "$name (updated)" || ok "$name (present)"
   else
-    {
-      printf '\n# dotfiles-nvim shell extras (added by install.sh)\n'
-      printf '%s\n' "$SOURCE_LINE"
-    } >> "$ZSHRC"
-    ok "appended source line to ~/.zshrc — run \`source ~/.zshrc\` to activate"
+    info "cloning $name..."
+    git clone --depth=1 "$repo" "$dest" >/dev/null 2>&1 && ok "$name cloned" \
+      || warn "$name clone failed — check network and re-run"
   fi
-  # Seed shell/.env from .env.example if absent so users see the template.
-  ENV_LOCAL="$NVIM_CONFIG/shell/.env"
-  if [[ ! -f "$ENV_LOCAL" && -f "$NVIM_CONFIG/shell/.env.example" ]]; then
-    info "shell/.env not present — copy shell/.env.example and fill in values if you need any secrets"
+done
+
+# ----------------------------------------------------------------------------
+# Shell + tool config files — symlinked from the repo (single source of truth;
+# `git pull` propagates instantly). Existing files are backed up, not clobbered.
+# ----------------------------------------------------------------------------
+step "Shell & tool configs (symlinks)"
+
+link_config() {
+  # link_config <repo-relative-src> <absolute-dest>
+  local src="$NVIM_CONFIG/$1" dst="$2"
+  [[ -f "$src" ]] || { warn "missing in repo: $1 (skip)"; return; }
+  mkdir -p "$(dirname "$dst")"
+  if [[ -L "$dst" && "$(readlink "$dst")" == "$src" ]]; then
+    ok "$dst → $1 (already linked)"
+    return
   fi
+  if [[ -e "$dst" || -L "$dst" ]]; then
+    local backup="${dst}.bak.$(date +%s)"
+    mv "$dst" "$backup"
+    info "backed up existing $dst → $backup"
+  fi
+  ln -s "$src" "$dst"
+  ok "$dst → $1"
+}
+
+link_config "shell/zshrc"           "$HOME/.zshrc"
+link_config "shell/zprofile"        "$HOME/.zprofile"
+link_config "shell/zshenv"          "$HOME/.zshenv"
+link_config "starship/starship.toml" "${XDG_CONFIG_HOME:-$HOME/.config}/starship.toml"
+link_config "git/gitconfig"         "$HOME/.gitconfig"
+
+# Seed the private override file (secrets + machine-specific) from its template.
+ZSHRC_LOCAL="$HOME/.zshrc.local"
+if [[ ! -f "$ZSHRC_LOCAL" && -f "$NVIM_CONFIG/shell/zshrc.local.example" ]]; then
+  cp "$NVIM_CONFIG/shell/zshrc.local.example" "$ZSHRC_LOCAL"
+  warn "created $ZSHRC_LOCAL from template — add your API tokens / private functions there"
+else
+  ok "$ZSHRC_LOCAL present (kept)"
+fi
+
+# Seed shell/.env from .env.example if absent so users see the template.
+ENV_LOCAL="$NVIM_CONFIG/shell/.env"
+if [[ ! -f "$ENV_LOCAL" && -f "$NVIM_CONFIG/shell/.env.example" ]]; then
+  info "shell/.env not present — copy shell/.env.example and fill in values if you need any secrets"
 fi
 
 step "Ghostty config (alternative terminal)"

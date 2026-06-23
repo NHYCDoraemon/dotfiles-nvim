@@ -5,12 +5,16 @@ debug
 .repro
 foo.*
 *.log
+*.swp
 .DS_Store
 data
 .superpowers/
 
 # Local secrets / machine-specific env (never commit)
 shell/.env
+# ~/.zshrc.local lives in $HOME, not here, but guard against a stray copy.
+zshrc.local
+.zshrc.local
 
 # kitty themes-kitten output. The Catppuccin Mocha palette is inlined in
 # kitty/kitty.conf — see the warning at the bottom of that file. Anything

@@ -1,0 +1,20 @@
+# dotfiles — canonical ~/.zprofile  (symlinked here by install.sh)
+# Login-shell setup: PATH + toolchain roots that should exist before ~/.zshrc.
+
+# Homebrew (Apple Silicon)
+if [ -x /opt/homebrew/bin/brew ]; then
+  eval "$(/opt/homebrew/bin/brew shellenv)"
+elif [ -x /usr/local/bin/brew ]; then
+  eval "$(/usr/local/bin/brew shellenv)"
+fi
+
+# Go
+export GOPATH="$HOME/go"
+export PATH="$PATH:/usr/local/go/bin:$GOPATH/bin"
+
+# Java — pin to 17 for project compile target (jdtls itself needs 21 at runtime,
+# resolved separately). Guard so a machine without Java 17 doesn't error.
+if /usr/libexec/java_home -v 17 >/dev/null 2>&1; then
+  export JAVA_HOME="$(/usr/libexec/java_home -v 17)"
+  export PATH="$JAVA_HOME/bin:$PATH"
+fi

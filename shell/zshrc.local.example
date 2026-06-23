@@ -1,0 +1,20 @@
+# dotfiles — ~/.zshrc.local template  (PRIVATE, never committed)
+#
+# Copy to ~/.zshrc.local and fill in. Sourced at the end of ~/.zshrc.
+# install.sh creates ~/.zshrc.local from this template if it's missing.
+#
+# Put anything machine-specific or secret here:
+#   - API tokens (prefer ~/.config/nvim/shell/.env for keys consumed by tools,
+#     but shell-only exports can live here too)
+#   - private project helper functions / paths
+#   - per-machine PATH tweaks
+
+# ---- Secrets -----------------------------------------------------------------
+# export CLAUDE_CODE_OAUTH_TOKEN="sk-ant-oat01-..."   # rotate at console.anthropic.com
+
+# ---- Private project shortcuts ----------------------------------------------
+# Run orch in the right clone workspace (avoids running it in the wrong repo).
+# peo() { (cd ~/orch-workspaces/process-engine   && orch "$@"); }
+# pfe() { (cd ~/orch-workspaces/process-frontend && orch "$@"); }
+# Run any command in the process-engine main repo.
+# pe()  { (cd ~/IdeaProjects/process-engine && "$@"); }

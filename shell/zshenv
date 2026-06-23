@@ -1,0 +1,3 @@
+# dotfiles — canonical ~/.zshenv  (symlinked here by install.sh)
+# Sourced for every zsh invocation (including non-interactive). Keep it minimal.
+[ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
