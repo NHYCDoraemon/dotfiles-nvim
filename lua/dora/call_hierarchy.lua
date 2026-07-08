@@ -290,7 +290,7 @@ local function strip_source_noise(line)
   return vim.trim(line)
 end
 
-local function collect_method_lines(lines, start_lnum, max_lines)
+function M.collect_method_lines(lines, start_lnum, max_lines)
   local collected = {}
   local balance = 0
   local started = false
@@ -394,7 +394,7 @@ function M.method_summary(item, opts)
     return { actions = {}, properties = {}, outputs = {}, exceptions = {} }
   end
 
-  local body = collect_method_lines(lines, range_line(item), opts.summary_max_lines or 80)
+  local body = M.collect_method_lines(lines, range_line(item), opts.summary_max_lines or 80)
   local actions, properties, outputs, exceptions = {}, {}, {}, {}
   local seen_actions, seen_properties, seen_outputs, seen_exceptions = {}, {}, {}, {}
 

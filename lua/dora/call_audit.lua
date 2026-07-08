@@ -93,13 +93,17 @@ local function walk_nodes(root, visit)
   walk(root)
 end
 
-local function source_snippet(path, center, radius)
+local function source_snippet(path, center, radius, graph)
   if path == "" or vim.fn.filereadable(path) ~= 1 then return {} end
   local ok, lines = pcall(vim.fn.readfile, path)
   if not ok or not lines then return {} end
 
   local first = math.max(1, center - radius)
   local last = math.min(#lines, center + radius)
+  if graph and graph.collect_method_lines then
+    local body = graph.collect_method_lines(lines, center, 160)
+    last = math.max(last, math.min(#lines, center + #body - 1))
+  end
   local out = {}
   for lnum = first, last do
     table.insert(out, ("%4d | %s"):format(lnum, lines[lnum] or ""))
@@ -129,10 +133,11 @@ local function build_prompt(context)
     "你是一个资深代码审计解释器。请基于下面提供的调用图和源码片段做只读代码审计。",
     "",
     "硬性边界:",
-    "- 只解释和审计，不修改文件。",
-    "- 不执行 shell、构建、测试或 git 命令。",
-    "- 只使用我提供的代码片段和文件行号作为证据。",
-    "- 如果某个结论只是推断，必须明确标记为推断。",
+    "- 只解释和审计，不修改任何文件。",
+    "- 不执行构建、测试或 git 写操作。",
+    "- 下面的代码片段只是起点证据。允许并鼓励用只读工具（读文件/搜索）在仓库内补齐完整方法体、上下游调用、事务/锁/权限注解和相关配置之后再下结论。",
+    "- 每个结论都给出证据位置（文件:行号）；仅凭推断的结论必须明确标记为推断。",
+    "- 注意: 调用图经过业务视角过滤（框架代码、getter/setter、测试类被隐藏），不要把「图中未出现」当作「不存在」。",
     "",
     "输出格式必须稳定，使用这些中文小节:",
     "## 链路结论",
@@ -205,7 +210,7 @@ function M.build_context(root, opts)
       file = basename(path),
       line = line,
       summary = summary_lines,
-      snippet = source_snippet(path, line, opts.snippet_radius or 8),
+      snippet = source_snippet(path, line, opts.snippet_radius or 8, graph),
     })
   end)
 
@@ -516,6 +521,8 @@ function M.provider_command(provider, cwd, prompt)
       "--no-session-persistence",
       "--permission-mode",
       "dontAsk",
+      "--allowed-tools",
+      "Read,Grep,Glob",
       "--add-dir",
       cwd,
     }
