@@ -275,18 +275,14 @@ map("n", "<leader>nR", function() vim.cmd("vsplit ~/notes/scripts/weekly-review.
 -- ============================================================
 -- (11) THEME TOGGLE
 -- ============================================================
--- Quick day/night swap within the Rose Pine family.
--- Main (dark) ↔ Dawn (light) — both ship with the rose-pine plugin.
+-- Manual day/night toggle between the two auto themes:
+--   day  = rose-pine-dawn (light)  ·  night = catppuccin-frappe (dark)
+-- Pauses auto-switching for the session (<leader>uA resumes). Direction keys off
+-- vim.o.background, NOT colors_name (which is "rose-pine" for every rose-pine
+-- variant, so the old match("dawn") test could never reach dark).
 map("n", "<leader>uL", function()
-  local current = vim.g.colors_name or ""
-  if current:match("dawn") then
-    vim.cmd("colorscheme rose-pine-main")
-    vim.notify("Theme: Rose Pine Main (dark)", vim.log.levels.INFO)
-  else
-    vim.cmd("colorscheme rose-pine-dawn")
-    vim.notify("Theme: Rose Pine Dawn (light)", vim.log.levels.INFO)
-  end
-end, { desc = "Theme: toggle dark / light (rose-pine)" })
+  require("config.auto-theme").toggle()
+end, { desc = "Theme: toggle day / night (pauses auto)" })
 
 -- ============================================================
 -- (12) FONT LIVE PICKER (Neovide only)

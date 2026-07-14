@@ -83,12 +83,17 @@ return {
   },
 
   -- Default colorscheme at LazyVim level.
-  -- rose-pine-dawn = rose-pine 的 light 变体，暖暮粉色调，文艺简约。
-  -- 切到其他主题用 <leader>uC（picker）；rose-pine main/dawn 互切用 <leader>uL。
+  -- Now driven by macOS system appearance (see lua/config/auto-theme.lua):
+  --   Light → rose-pine-dawn   ·   Dark → catppuccin-frappe
+  -- picking the theme via a function lets LazyVim choose the right one at startup
+  -- with no flash. Manual override: <leader>uC (picker), <leader>uL (dawn/main),
+  -- <leader>uA resumes auto.
   {
     "LazyVim/LazyVim",
     opts = {
-      colorscheme = "rose-pine-dawn",
+      colorscheme = function()
+        require("config.auto-theme").apply_startup()
+      end,
     },
   },
 }

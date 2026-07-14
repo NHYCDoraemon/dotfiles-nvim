@@ -277,3 +277,7 @@ vim.api.nvim_create_autocmd({ "BufWinEnter", "WinNew" }, {
     end
   end,
 })
+
+-- Automatic day/night theme, driven by macOS system appearance.
+-- (Light → rose-pine-dawn · Dark → catppuccin-frappe). See lua/config/auto-theme.lua.
+require("config.auto-theme").setup()
