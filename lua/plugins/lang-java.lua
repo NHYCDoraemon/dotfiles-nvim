@@ -7,11 +7,21 @@ return {
       -- block below. We resolve both JDKs here:
       --   * jdtls_java_home → Java 21 for jdtls's process
       --   * project_java_17 → Java 17 for project compilation/inlay/etc.
+      -- Exact version-family query (e.g. `-v 17` matches only 17.x). Used for
+      -- the project `runtimes` list, where we want to label each JDK precisely.
       local function jhome(version)
         local h = vim.fn.trim(vim.fn.system("/usr/libexec/java_home -v " .. version .. " 2>/dev/null"))
         return (h ~= "" and not h:match("error")) and h or nil
       end
-      local jdtls_java_home  = jhome(21) or jhome(17) or os.getenv("JAVA_HOME")
+      -- "version or newer" query (the trailing `+`). jdtls's own JVM needs 21+,
+      -- so pick the NEWEST installed JDK >= 21 — a machine with JDK 25 (but no
+      -- 21) must still resolve here. `jhome(21)` alone would miss 25 and fall
+      -- back to Java 17, which is too old to launch jdtls.
+      local function jhome_min(version)
+        local h = vim.fn.trim(vim.fn.system("/usr/libexec/java_home -v " .. version .. "+ 2>/dev/null"))
+        return (h ~= "" and not h:match("error")) and h or nil
+      end
+      local jdtls_java_home  = jhome_min(21) or os.getenv("JAVA_HOME")
       local project_java_17  = jhome(17)
       local project_java_21  = jhome(21)
       opts.jdtls = vim.tbl_deep_extend("force", opts.jdtls or {}, {
