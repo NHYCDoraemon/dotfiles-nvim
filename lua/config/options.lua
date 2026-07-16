@@ -175,6 +175,11 @@ if vim.g.neovide then
   vim.g.neovide_cursor_animation_length       = 0.08
   vim.g.neovide_cursor_trail_size             = 1.0
   vim.g.neovide_cursor_animate_in_insert_mode = true
+  -- Breathing (smooth_blink) — ON, with eyes open about the cost: on macOS
+  -- Neovide full-window-repaints the Retina window for any continuous animation
+  -- (no partial render, vsync forced), so breathing keeps ~30% of ONE core busy
+  -- even at idle. On this 18-core M5 Pro that's ~1.7% of the machine — an
+  -- accepted trade for the effect. Turn off to drop idle to ~1% of one core.
   vim.g.neovide_cursor_smooth_blink           = true
 
   -- Cursor particle effect — pixie-dust trail behind cursor when moving.
@@ -203,18 +208,14 @@ if vim.g.neovide then
   -- Window position animation (when nvim moves/resizes splits).
   vim.g.neovide_position_animation_length   = 0.10
 
-  -- Refresh rate — capped at 30Hz on purpose.
-  --
-  -- The breathing cursor (smooth_blink + an always-on blinkon/blinkoff in
-  -- guicursor) is a PERPETUAL fade animation that never settles, so Neovide
-  -- never reaches its idle state — `_refresh_rate_idle` effectively never
-  -- applies, and it would otherwise render at the full active rate forever,
-  -- pegging a CPU core at 100%. Capping the active rate at 30 keeps the
-  -- breathing effect while cutting the continuous render cost ~4x.
-  -- (If you ever drop the breathing cursor, you can safely raise this back
-  --  to 120 for ProMotion-smooth scrolling, since idle would then kick in.)
+  -- Refresh rate.
+  -- NOTE: on macOS vsync can't be disabled (Metal presents in sync with the
+  -- display), so `neovide_refresh_rate` is effectively a no-op here — Neovide
+  -- renders at the display rate whenever anything animates. The CPU fix is not
+  -- the fps but removing what animates continuously (the breathing cursor, now
+  -- off above). These values only matter on Linux/Windows.
   vim.g.neovide_refresh_rate                = 30
-  vim.g.neovide_refresh_rate_idle           = 30
+  vim.g.neovide_refresh_rate_idle           = 5
 
   -- Quality-of-life polish.
   vim.g.neovide_hide_mouse_when_typing      = true
