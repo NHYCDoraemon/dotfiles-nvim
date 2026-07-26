@@ -1,7 +1,9 @@
 local M = {}
 
 M.defaults = {
-  provider = "claude",
+  provider = "codex",
+  codex_model = "gpt-5.6-sol",
+  codex_reasoning_effort = "ultra",
   snippet_radius = 8,
   panel_ratio = 0.48,
   toc_width = 24,
@@ -9,12 +11,11 @@ M.defaults = {
 }
 
 local sections = {
-  { key = "summary", label = "链路结论", hint = "这条链路到底做什么" },
-  { key = "architecture", label = "架构视角", hint = "职责边界是否合理" },
-  { key = "breakdown", label = "功能拆解", hint = "每一步输入/输出/状态" },
-  { key = "dataflow", label = "数据流", hint = "关键值如何传递" },
-  { key = "risks", label = "异常与风险", hint = "事务、幂等、权限、锁" },
-  { key = "suggestions", label = "改进建议", hint = "只建议，不自动修改" },
+  { key = "summary", label = "调用结论", hint = "这条链路做什么，是否正确" },
+  { key = "walkthrough", label = "执行过程", hint = "按实际顺序解释每一步" },
+  { key = "dataflow", label = "数据与状态", hint = "输入、转换、副作用与输出" },
+  { key = "correctness", label = "正确性核验", hint = "逐项说明事实、依据和成立条件" },
+  { key = "boundaries", label = "上下文边界", hint = "明确未验证内容，不猜测" },
 }
 
 local function merge_opts(opts)
@@ -129,23 +130,47 @@ local function summary_text(summary)
 end
 
 local function build_prompt(context)
+  local direction = context.opts and context.opts.direction or "outgoing"
+  local direction_text = direction == "incoming"
+      and "上游调用者（incoming）：根节点是当前方法，子节点表示谁调用它。每条路径的执行方向是最外层调用者 → 直接调用者 → 当前方法；不同分支是不同入口路径，不是依次执行。"
+    or "下游被调用者（outgoing）：从根节点出发，沿子节点查看它继续调用的方法；同级节点是否依次执行必须以方法体控制流为准。"
   local lines = {
-    "你是一个资深代码审计解释器。请基于下面提供的调用图和源码片段做只读代码审计。",
+    "你是调用链讲解员和正确性核验者。你只对「把整个调用过程讲准确，并说明其正确性」负责。",
+    "请基于下面的调用图和仓库源码，给出证据充分、可复核的只读讲解。",
+    "",
+    "图的方向:",
+    "- " .. direction_text,
+    "- 必须先确认调用方向，再描述真实执行顺序；不得把上游调用者树误写成下游执行链。",
+    "",
+    "工作要求:",
+    "- 先用只读工具（读文件/搜索）补齐与这条链路直接相关的完整方法体、调用方/被调用方、注解、配置和数据定义，再下结论。",
+    "- 调用图只是导航线索，不代表完整上下文。沿可见路径补齐业务入口、当前方法及其相关后续调用，直到返回、异常或可观察副作用的边界。",
+    "- 按真实控制流解释入口、参数校验、分支、逐层调用、状态变化、副作用、返回值和异常出口。",
+    "- 对每个调用交接点核验：传入值从哪里来、被调用方使用什么、结果如何返回或继续传递。",
+    "- 正确性结论只能依据已读取的代码和配置。每个实质性结论都必须给出证据位置（文件:行号）。",
+    "- 「正确」仅表示当前证据能够证明调用关系、控制流、数据流和可见契约彼此一致；没有业务需求、外部契约或运行时数据时，不得宣称业务语义绝对正确。",
     "",
     "硬性边界:",
-    "- 只解释和审计，不修改任何文件。",
+    "- 只读解释，不修改任何文件。",
     "- 不执行构建、测试或 git 写操作。",
-    "- 下面的代码片段只是起点证据。允许并鼓励用只读工具（读文件/搜索）在仓库内补齐完整方法体、上下游调用、事务/锁/权限注解和相关配置之后再下结论。",
-    "- 每个结论都给出证据位置（文件:行号）；仅凭推断的结论必须明确标记为推断。",
+    "- 不做架构设计评审、通用缺陷扫描、重构建议或改进建议，除非用户另行明确要求。",
+    "- 不得猜测缺失代码、运行时行为或作者意图，也不得把「可能存在问题」包装成结论。",
+    "- 上下文不足时，只能写「无法验证」，并准确列出缺少什么证据以及它影响哪一项判断。",
+    "- 在未同时核对调用方、被调用方及相关契约前，不得对该调用交接点给出完整正确的判定。",
+    "- 只有直接证据证明调用关系、数据传递或可见契约相互矛盾时，才能判定「不成立」。",
     "- 注意: 调用图经过业务视角过滤（框架代码、getter/setter、测试类被隐藏），不要把「图中未出现」当作「不存在」。",
     "",
     "输出格式必须稳定，使用这些中文小节:",
-    "## 链路结论",
-    "## 架构视角",
-    "## 功能拆解",
-    "## 数据流",
-    "## 异常与风险",
-    "## 改进建议",
+    "## 调用结论",
+    "用简洁语言说明调用目标、实际起点与终点，并给出「已验证 / 部分可验证 / 无法验证」之一的总判定及适用范围。",
+    "## 执行过程",
+    "按真实执行顺序逐步讲解；覆盖图中每个节点。推荐表格列：步骤、调用方 → 被调用方、输入、动作、输出/状态、证据。",
+    "## 数据与状态",
+    "追踪关键参数、对象字段、持久化状态、外部副作用、返回值和异常如何产生、变化与传递。",
+    "## 正确性核验",
+    "逐项列出核验点、直接证据、结论（成立 / 不成立 / 无法验证）和成立条件。不得用猜测填充空白。",
+    "## 上下文边界",
+    "只列尚未读取或仓库内不存在、因而影响判断的具体证据；如果没有，明确写「未发现影响本次核验的上下文缺口」。",
     "",
     "调用图:",
     "```text",
@@ -160,7 +185,8 @@ local function build_prompt(context)
 
   for index, evidence in ipairs(context.evidence or {}) do
     table.insert(lines, ("### [%d] %s"):format(index, evidence.label))
-    table.insert(lines, ("位置: %s:%d"):format(evidence.file, evidence.line))
+    local source_path = evidence.path and evidence.path ~= "" and evidence.path or evidence.file
+    table.insert(lines, ("位置: %s:%d"):format(source_path, evidence.line))
     if evidence.role and evidence.role ~= "" then
       table.insert(lines, "角色: " .. evidence.role)
     end
@@ -186,7 +212,7 @@ function M.build_context(root, opts)
   local context = {
     root = root,
     opts = opts,
-    title = opts.title or "AI Call Audit",
+    title = opts.title or "AI Call Explanation",
     diagram_lines = opts.diagram_lines or {},
     evidence = {},
   }
@@ -221,7 +247,7 @@ end
 function M.initial_report_lines(opts)
   opts = merge_opts(opts)
   local lines = {
-    "# AI 审计报告",
+    "# AI 调用讲解",
     "",
     ("状态: %s  Provider: %s"):format(opts.status or "idle", opts.provider or M.defaults.provider),
     "",
@@ -486,6 +512,30 @@ function M.parse_codex_event_json(line)
   local event = decode_json(line)
   if not event then return nil end
 
+  if event.type == "thread.started" then
+    return { activity = "Codex 已启动" }
+  end
+  if event.type == "turn.started" then
+    return { activity = "GPT-5.6 Sol · Ultra · Bypass 正在分析调用链" }
+  end
+  if event.type == "item.started" and type(event.item) == "table" then
+    if event.item.type == "command_execution" then
+      return { activity = "正在读取项目证据" }
+    end
+    return { activity = "正在核验调用步骤" }
+  end
+  if event.type == "item.completed" and type(event.item) == "table" then
+    if event.item.type == "agent_message" and event.item.text then
+      return { text = event.item.text, activity = "正在生成调用讲解" }
+    end
+    if event.item.type == "reasoning" then
+      return { activity = "已完成一轮推理" }
+    end
+    if event.item.type == "command_execution" then
+      return { activity = "已读取项目证据" }
+    end
+    return nil
+  end
   if event.delta then
     return { text = event.delta }
   end
@@ -495,10 +545,18 @@ function M.parse_codex_event_json(line)
   if event.type == "agent_message" and event.text then
     return { text = event.text }
   end
-  if event.type == "task_complete" then
-    return { done = true }
+  if event.type == "task_complete" or event.type == "turn.completed" then
+    return { done = true, activity = "讲解完成" }
   end
   return nil
+end
+
+function M.provider_stderr_text(provider, data)
+  local lines = vim.tbl_filter(function(line)
+    if line == "" then return false end
+    return provider ~= "codex" or line ~= "Reading additional input from stdin..."
+  end, data or {})
+  return table.concat(lines, "\n")
 end
 
 function M.provider_stdin(provider, prompt)
@@ -531,12 +589,13 @@ function M.provider_command(provider, cwd, prompt)
   if provider == "codex" then
     return {
       M.resolve_executable("codex") or "codex",
+      "--dangerously-bypass-approvals-and-sandbox",
       "exec",
+      "-m",
+      M.defaults.codex_model,
+      "-c",
+      ('model_reasoning_effort="%s"'):format(M.defaults.codex_reasoning_effort),
       "--json",
-      "--sandbox",
-      "read-only",
-      "-a",
-      "never",
       "-C",
       cwd,
       prompt,
@@ -556,24 +615,27 @@ local state = {
 
 local ns = vim.api.nvim_create_namespace("dora-call-audit")
 
-local audit_highlights = {
-  DoraCallAuditTitle = { fg = "#286983", bold = true },
-  DoraCallAuditStreaming = { fg = "#d7827e", bold = true },
-  DoraCallAuditEvidence = { fg = "#56949f", bold = true },
-  DoraCallAuditRisk = { fg = "#b4637a", bold = true },
-  DoraCallAuditMuted = { fg = "#9893a5" },
-  DoraCallAuditBorder = { fg = "#dfdad9" },
-  DoraCallAuditSection = { fg = "#907aa9", bold = true },
-  DoraCallAuditNormal = { bg = "#fffaf3" },
-  DoraCallAuditCursorLine = { bg = "#f2e9e1" },
-  DoraCallAuditStatus = { fg = "#286983", bg = "#f4ede8", bold = true },
+local audit_highlight_links = {
+  DoraCallAuditTitle = "Title",
+  DoraCallAuditStreaming = "DiagnosticInfo",
+  DoraCallAuditEvidence = "Identifier",
+  DoraCallAuditRisk = "DiagnosticWarn",
+  DoraCallAuditMuted = "Comment",
+  DoraCallAuditBorder = "WinSeparator",
+  DoraCallAuditSection = "Special",
 }
 
 local function setup_highlights()
-  for group, spec in pairs(audit_highlights) do
-    vim.api.nvim_set_hl(0, group, spec)
+  for group, target in pairs(audit_highlight_links) do
+    vim.api.nvim_set_hl(0, group, { link = target })
   end
 end
+
+vim.api.nvim_create_autocmd("ColorScheme", {
+  group = vim.api.nvim_create_augroup("dora_call_explanation_highlights", { clear = true }),
+  callback = vim.schedule_wrap(setup_highlights),
+})
+vim.schedule(setup_highlights)
 
 local function set_buf_lines(buf, lines)
   if not buf or not vim.api.nvim_buf_is_valid(buf) then return end
@@ -606,7 +668,7 @@ local function apply_report_highlights(buf, lines)
       vim.api.nvim_buf_add_highlight(buf, ns, "DoraCallAuditTitle", lnum - 1, 0, -1)
     elseif line:match("^##") then
       vim.api.nvim_buf_add_highlight(buf, ns, "DoraCallAuditSection", lnum - 1, 0, -1)
-    elseif line:match("异常") or line:match("风险") then
+    elseif line:match("不成立") or line:match("无法验证") then
       vim.api.nvim_buf_add_highlight(buf, ns, "DoraCallAuditRisk", lnum - 1, 0, -1)
     elseif line:match("^状态:") or line:match("^>") then
       vim.api.nvim_buf_add_highlight(buf, ns, "DoraCallAuditMuted", lnum - 1, 0, -1)
@@ -616,12 +678,13 @@ end
 
 local function render_toc_lines()
   local lines = {
-    "AI Call Audit",
-    "Downstream Call Hierarchy",
+    "AI Call Explanation",
+    (state.context and state.context.title) or "Call Hierarchy",
     ("状态: %s"):format(state.status or "idle"),
     ("Provider: %s"):format(state.provider or M.defaults.provider),
+    ("进度: %s"):format(state.activity or "等待开始"),
     "",
-    "审计目录",
+    "讲解目录",
     "",
   }
   for index, section in ipairs(sections) do
@@ -631,10 +694,9 @@ local function render_toc_lines()
   table.insert(lines, "")
   table.insert(lines, "操作")
   table.insert(lines, "1-5 跳转讲解")
-  table.insert(lines, "6 改进建议")
-  table.insert(lines, "E 重新审计")
+  table.insert(lines, "E 重新讲解")
   table.insert(lines, "S 停止流式")
-  table.insert(lines, "C 复制报告")
+  table.insert(lines, "C 复制讲解")
   table.insert(lines, "q 关闭面板")
   return lines
 end
@@ -643,10 +705,12 @@ local function render_report_lines()
   local lines
   if state.report_text and state.report_text ~= "" then
     lines = vim.split(state.report_text, "\n", { plain = true })
+    table.insert(lines, 1, ("进度: %s"):format(state.activity or "等待开始"))
     table.insert(lines, 1, ("状态: %s  Provider: %s"):format(state.status or "idle", state.provider or M.defaults.provider))
-    table.insert(lines, 1, "# AI 审计报告")
+    table.insert(lines, 1, "# AI 调用讲解")
   else
     lines = M.initial_report_lines({ status = state.status, provider = state.provider })
+    table.insert(lines, 3, ("进度: %s"):format(state.activity or "等待开始"))
   end
   local table_width = state.layout and state.layout.report_width or nil
   if state.wins and state.wins.report and vim.api.nvim_win_is_valid(state.wins.report) then
@@ -662,7 +726,7 @@ local function render_evidence_lines()
     "证据与操作",
     "<CR> 跳转证据",
     "[/] 切换证据",
-    "C 复制报告",
+    "C 复制讲解",
     "",
   }
   local by_line = {}
@@ -741,36 +805,36 @@ local function set_panel_keymaps(buf)
   for index = 1, #sections do
     map(tostring(index), function()
       jump_report_section(index)
-    end, ("Call audit: section %d"):format(index))
+    end, ("Call explanation: section %d"):format(index))
   end
 
   map("E", function()
     if state.context then M.open(state.context.root, state.context.opts) end
-  end, "Call audit: refresh")
+  end, "Call explanation: refresh")
 
   map("S", function()
     M.stop()
-  end, "Call audit: stop")
+  end, "Call explanation: stop")
 
   map("C", function()
     M.copy_report()
-  end, "Call audit: copy report")
+  end, "Call explanation: copy")
 
   map("<CR>", function()
     jump_to_evidence(selected_evidence())
-  end, "Call audit: jump evidence")
+  end, "Call explanation: jump evidence")
 
   map("]", function()
     move_evidence(1)
-  end, "Call audit: next evidence")
+  end, "Call explanation: next evidence")
 
   map("[", function()
     move_evidence(-1)
-  end, "Call audit: previous evidence")
+  end, "Call explanation: previous evidence")
 
   map("q", function()
     M.close()
-  end, "Call audit: close")
+  end, "Call explanation: close")
 
   map("Q", function()
     local ok, graph = pcall(require, "dora.call_hierarchy")
@@ -779,13 +843,13 @@ local function set_panel_keymaps(buf)
     else
       M.close()
     end
-  end, "Call audit: close all hierarchy/audit panels")
+  end, "Call explanation: close all hierarchy/explanation panels")
 
   local function locked()
-    vim.notify("AI audit panel is locked; close it with q before switching buffers.", vim.log.levels.INFO)
+    vim.notify("AI call explanation panel is locked; close it with q before switching buffers.", vim.log.levels.INFO)
   end
   for _, lhs in ipairs({ "]b", "[b", "<S-l>", "<S-h>", "<leader>bn", "<leader>bp" }) do
-    map(lhs, locked, "Call audit: locked buffer")
+    map(lhs, locked, "Call explanation: locked buffer")
   end
 end
 
@@ -850,9 +914,9 @@ local function open_panel()
   local layout = M.panel_layout(vim.o.columns, vim.o.lines, state.opts)
   state.layout = layout
   state.bufs = {
-    toc = make_buf("Call Audit TOC", "call_audit"),
-    report = make_buf("Call Audit Report", "markdown"),
-    evidence = make_buf("Call Audit Evidence", "call_audit"),
+    toc = make_buf("Call Explanation TOC", "call_audit"),
+    report = make_buf("Call Explanation Report", "call_audit"),
+    evidence = make_buf("Call Explanation Evidence", "call_audit"),
   }
 
   vim.cmd(("botright %dnew"):format(layout.height))
@@ -877,8 +941,8 @@ local function open_panel()
   end
 
   local winbars = {
-    toc = "  审计目录",
-    report = "  AI 审计报告",
+    toc = "  讲解目录",
+    report = "  AI 调用讲解",
     evidence = "  证据与操作",
   }
   for name, win in pairs(state.wins) do
@@ -892,9 +956,7 @@ local function open_panel()
       pcall(function() vim.wo[win].winfixbuf = true end)
       vim.wo[win].conceallevel = 3
       vim.wo[win].concealcursor = "nc"
-      vim.wo[win].winhighlight =
-        "Normal:DoraCallAuditNormal,CursorLine:DoraCallAuditCursorLine,StatusLine:DoraCallAuditStatus"
-      vim.wo[win].statusline = " " .. (winbars[name] or "AI 审计")
+      vim.wo[win].statusline = " " .. (winbars[name] or "AI 调用讲解")
       pcall(function() vim.wo[win].winbar = winbars[name] or "" end)
     end
   end
@@ -944,6 +1006,7 @@ local function start_job()
 
   state.status = "streaming"
   state.report_text = ""
+  state.activity = "正在启动 GPT-5.6 Sol · Ultra · Bypass"
   refresh_panel()
 
   local job_opts = {
@@ -958,8 +1021,13 @@ local function start_job()
         for _, line in ipairs(data or {}) do
           if line ~= "" then
             local event = parse_provider_line(line)
+            if event and event.activity then
+              state.activity = event.activity
+            end
             if event and event.text then
               append_text(event.text)
+            elseif event and event.activity then
+              refresh_panel()
             end
           end
         end
@@ -967,7 +1035,7 @@ local function start_job()
     end,
     on_stderr = function(_, data)
       vim.schedule(function()
-        local text = table.concat(vim.tbl_filter(function(line) return line ~= "" end, data or {}), "\n")
+        local text = M.provider_stderr_text(provider, data)
         if text ~= "" and state.report_text == "" then
           state.report_text = "## Provider 输出\n\n" .. text
           refresh_panel()
@@ -982,6 +1050,7 @@ local function start_job()
         end
         state.job = nil
         state.status = code == 0 and "complete" or "failed"
+        state.activity = code == 0 and "讲解完成" or "讲解失败"
         if state.report_text == "" then
           state.report_text = code == 0 and "## 完成\n\nProvider 没有返回可用文本。"
             or ("## Provider 失败\n\n退出码: " .. tostring(code))
@@ -989,8 +1058,8 @@ local function start_job()
         refresh_panel()
       end)
     end,
+    stdin = stdin and "pipe" or "null",
   }
-  if stdin then job_opts.stdin = "pipe" end
 
   state.job = vim.fn.jobstart(command, job_opts)
 
@@ -1022,7 +1091,7 @@ function M.open(root, opts)
   opts = merge_opts(opts)
   local graph = opts.graph or require("dora.call_hierarchy")
   if not root then
-    vim.notify("No call hierarchy graph available for audit", vim.log.levels.WARN)
+    vim.notify("No call hierarchy graph available for explanation", vim.log.levels.WARN)
     return
   end
 
@@ -1037,6 +1106,7 @@ function M.open(root, opts)
   state.provider = opts.provider or vim.g.call_audit_provider or M.defaults.provider
   state.status = "preparing"
   state.report_text = ""
+  state.activity = "正在准备调用链上下文"
   state.evidence_index = 1
   state.active_section = 1
   state.context = M.build_context(root, vim.tbl_extend("force", opts, {
@@ -1063,7 +1133,7 @@ function M.copy_report()
     text = table.concat(render_report_lines(), "\n")
   end
   vim.fn.setreg("+", text)
-  vim.notify("Call audit report copied to clipboard", vim.log.levels.INFO)
+  vim.notify("Call explanation copied to clipboard", vim.log.levels.INFO)
 end
 
 function M.close()
@@ -1085,10 +1155,10 @@ function M.render_panel_lines(context, state)
   }, state or {})
 
   local lines = {
-    "AI Call Audit",
+    "AI Call Explanation",
     ("状态=%s  Provider=%s"):format(state.status, state.provider),
     "",
-    "审计目录",
+    "讲解目录",
   }
   local maps = {
     evidence_lines = {},
@@ -1100,27 +1170,24 @@ function M.render_panel_lines(context, state)
   end
 
   table.insert(lines, "")
-  table.insert(lines, "AI 审计报告")
+  table.insert(lines, "AI 调用讲解")
   if state.report and #state.report > 0 then
     vim.list_extend(lines, M.render_markdown_view(state.report))
   else
     vim.list_extend(lines, M.render_markdown_view({
-      "## 链路结论",
+      "## 调用结论",
       "等待 AI 输出...",
       "",
-      "## 架构视角",
+      "## 执行过程",
       "等待 AI 输出...",
       "",
-      "## 功能拆解",
+      "## 数据与状态",
       "等待 AI 输出...",
       "",
-      "## 数据流",
+      "## 正确性核验",
       "等待 AI 输出...",
       "",
-      "## 异常与风险",
-      "等待 AI 输出...",
-      "",
-      "## 改进建议",
+      "## 上下文边界",
       "等待 AI 输出...",
     }))
   end
@@ -1133,7 +1200,7 @@ function M.render_panel_lines(context, state)
     table.insert(maps.evidence_lines, { line = #lines, evidence = evidence })
   end
   table.insert(lines, "")
-  table.insert(lines, "E 刷新审计  S 停止  C 复制报告  <CR> 跳转证据  [/] 切换证据")
+  table.insert(lines, "E 刷新讲解  S 停止  C 复制讲解  <CR> 跳转证据  [/] 切换证据")
 
   return lines, maps
 end

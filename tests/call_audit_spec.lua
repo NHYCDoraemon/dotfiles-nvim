@@ -61,7 +61,7 @@ local function item(name, detail, path, line)
   }
 end
 
-run("builds read-only audit context with diagram, snippets, and evidence", function()
+run("builds evidence-based call explanation context with diagram and snippets", function()
   local path = temp_java({
     "class RuntimeFormSubmissionService {",
     "  public SubmitFormResult submit(SubmitFormCommand command) {",
@@ -79,6 +79,7 @@ run("builds read-only audit context with diagram, snippets, and evidence", funct
 
   local context = audit.build_context(root, {
     title = "Business ASCII Diagram",
+    direction = "incoming",
     diagram_lines = {
       "Business ASCII Diagram",
       "┌────────────────────────────────────┐",
@@ -87,10 +88,14 @@ run("builds read-only audit context with diagram, snippets, and evidence", funct
     graph = graph,
   })
 
-  assert_match(context.prompt, "只读代码审计", "prompt states read-only audit")
+  assert_match(context.prompt, "调用链讲解员", "prompt gives the agent a focused explanation role")
+  assert_match(context.prompt, "不做架构设计评审", "prompt excludes architecture review")
+  assert_match(context.prompt, "不得猜测", "prompt rejects speculative assertions")
+  assert_match(context.prompt, "最外层调用者 → 直接调用者 → 当前方法", "prompt explains incoming execution direction")
   assert_match(context.prompt, "Business ASCII Diagram", "prompt includes diagram title")
   assert_match(context.prompt, "RuntimeFormSubmissionService%.submit", "prompt includes node label")
   assert_match(context.prompt, "requireMatchingTenant", "prompt includes source snippet")
+  assert_eq(context.prompt:find(path, 1, true) ~= nil, true, "prompt includes an exact source path")
   assert_eq(#context.evidence >= 1, true, "context includes evidence")
   assert_eq(context.evidence[1].line, 2, "evidence line is 1-based")
 end)
@@ -121,19 +126,44 @@ run("parses Claude and Codex stream text chunks", function()
 
   local codex_message = audit.parse_codex_event_json('{"type":"agent_message","message":" final"}')
   assert_eq(codex_message.text, " final", "Codex message is parsed")
+
+  local codex_completed = audit.parse_codex_event_json(
+    '{"type":"item.completed","item":{"id":"item_3","type":"agent_message","text":" report"}}'
+  )
+  assert_eq(codex_completed.text, " report", "Codex completed agent message is parsed")
+  assert_eq(codex_completed.activity, "正在生成调用讲解", "Codex agent message updates live activity")
+
+  local codex_done = audit.parse_codex_event_json('{"type":"turn.completed","usage":{"output_tokens":12}}')
+  assert_eq(codex_done.done, true, "Codex completed turn is parsed")
+  assert_eq(codex_done.activity, "讲解完成", "Codex completed turn updates live activity")
+
+  local codex_started = audit.parse_codex_event_json('{"type":"turn.started"}')
+  assert_match(codex_started.activity, "Ultra", "Codex started turn exposes model activity")
+
+  local stderr = audit.provider_stderr_text("codex", {
+    "Reading additional input from stdin...",
+    "",
+  })
+  assert_eq(stderr, "", "Codex stdin notice is hidden from the audit report")
 end)
 
-run("creates stable initial report skeleton", function()
+run("creates focused call explanation skeleton", function()
   local lines = audit.initial_report_lines({ provider = "claude", status = "idle" })
   local text = table.concat(lines, "\n")
 
-  assert_match(text, "链路结论", "skeleton includes chain summary")
-  assert_match(text, "架构视角", "skeleton includes architecture section")
-  assert_match(text, "异常与风险", "skeleton includes risk section")
+  assert_match(text, "调用结论", "skeleton includes call summary")
+  assert_match(text, "执行过程", "skeleton includes chronological walkthrough")
+  assert_match(text, "数据与状态", "skeleton includes data and state flow")
+  assert_match(text, "正确性核验", "skeleton includes correctness verification")
+  assert_match(text, "上下文边界", "skeleton includes evidence boundaries")
+  assert_not_match(text, "架构视角", "skeleton excludes architecture review")
+  assert_not_match(text, "改进建议", "skeleton excludes unsolicited suggestions")
   assert_match(text, "claude", "skeleton includes provider")
 end)
 
 run("selects provider commands for Claude and Codex", function()
+  assert_eq(audit.defaults.provider, "codex", "Codex is the default audit provider")
+
   local claude_cmd = audit.provider_command("claude", "/repo", "PROMPT")
   assert_match(claude_cmd[1], "claude$", "Claude command starts with resolved claude executable")
   assert_contains(claude_cmd, "-p", "Claude command uses print mode")
@@ -145,7 +175,16 @@ run("selects provider commands for Claude and Codex", function()
 
   local codex_cmd = audit.provider_command("codex", "/repo", "PROMPT")
   assert_match(codex_cmd[1], "codex$", "Codex command starts with resolved codex executable")
-  assert_contains(codex_cmd, "exec", "Codex command uses exec")
+  assert_eq(
+    codex_cmd[2],
+    "--dangerously-bypass-approvals-and-sandbox",
+    "Codex audit bypasses approvals and sandboxing"
+  )
+  assert_eq(codex_cmd[3], "exec", "Codex command uses exec after global options")
+  assert_not_contains(codex_cmd, "-a", "Codex bypass mode does not mix approval policies")
+  assert_not_contains(codex_cmd, "--sandbox", "Codex bypass mode does not mix sandbox policies")
+  assert_contains(codex_cmd, "gpt-5.6-sol", "Codex audit pins GPT-5.6 Sol")
+  assert_contains(codex_cmd, 'model_reasoning_effort="ultra"', "Codex audit uses the highest intelligence level")
   assert_contains(codex_cmd, "--json", "Codex command requests json events")
   assert_eq(audit.provider_stdin("codex", "PROMPT"), nil, "Codex keeps prompt in argv")
 
@@ -188,41 +227,41 @@ end)
 
 run("renders markdown into a reading view and keeps section positions", function()
   local lines = audit.render_markdown_view({
-    "# AI 审计报告",
+    "# AI 调用讲解",
     "",
     "状态: complete  Provider: claude",
     "",
-    "## 链路结论",
-    "> 这条链路到底做什么",
+    "## 调用结论",
+    "> 这条链路做什么，是否正确",
     "- 校验租户",
     "正文包含 **重点** 和 `tenantId`。",
     "",
-    "## 功能拆解",
+    "## 数据与状态",
     "1. 入口",
   })
   local text = table.concat(lines, "\n")
   local positions = audit.report_section_positions(lines)
 
-  assert_eq(lines[1], "AI 审计报告", "top heading is rendered without markdown marker")
+  assert_eq(lines[1], "AI 调用讲解", "top heading is rendered without markdown marker")
   assert_not_match(text, "^#", "rendered report hides raw markdown heading markers")
   assert_not_match(text, "\n##", "rendered report hides raw second-level heading markers")
   assert_match(text, "• 校验租户", "rendered report uses readable bullets")
   assert_match(text, "重点", "rendered report keeps bold text content")
   assert_not_match(text, "%*%*", "rendered report hides bold markers")
-  assert_eq(positions[1], 5, "section one points at 链路结论")
-  assert_eq(positions[3], 10, "section three points at 功能拆解")
+  assert_eq(positions[1], 5, "section one points at 调用结论")
+  assert_eq(positions[3], 10, "section three points at 数据与状态")
 end)
 
 run("renders markdown tables as aligned reading tables", function()
   local lines = audit.render_markdown_view({
-    "## 功能拆解",
+    "## 执行过程",
     "",
     "| 步骤 | 组件 | 职责 |",
     "| --- | --- | --- |",
     "| 1. 参数校验 | AdminOperationGuard 24 | 校验 reason 长度、confirmToken、adminUserId、apiEndpoint |",
     "| 2. 悲观读锁 | NodeSnapshotRepository.findForUpdate 628 | SELECT ... FOR UPDATE 获取行锁，同时验证 TenantContext 已设置 |",
     "",
-    "## 数据流",
+    "## 数据与状态",
   }, { table_width = 92 })
   local text = table.concat(lines, "\n")
 
@@ -241,7 +280,7 @@ run("renders markdown tables as aligned reading tables", function()
   end
 end)
 
-run("renders B-style audit panel lines with report and evidence maps", function()
+run("renders call explanation panel lines with report and evidence maps", function()
   local path = temp_java({
     "class RuntimeFormSubmissionService {",
     "  public SubmitFormResult submit(SubmitFormCommand command) {",
@@ -262,14 +301,14 @@ run("renders B-style audit panel lines with report and evidence maps", function(
   })
   local text = table.concat(lines, "\n")
 
-  assert_match(text, "审计目录", "panel includes toc")
-  assert_match(text, "AI 审计报告", "panel includes report heading")
+  assert_match(text, "讲解目录", "panel includes toc")
+  assert_match(text, "AI 调用讲解", "panel includes report heading")
   assert_match(text, "证据与操作", "panel includes evidence column")
   assert_match(text, "正文", "panel includes streamed report")
   assert_eq(#maps.evidence_lines >= 1, true, "panel maps evidence lines")
 end)
 
-run("opens locked audit windows with numeric section keymaps", function()
+run("opens locked explanation windows with numeric section keymaps", function()
   local path = temp_java({
     "class ForceClaimController {",
     "  long parseSnapshotId(String id) { return Long.parseLong(id); }",
@@ -284,15 +323,24 @@ run("opens locked audit windows with numeric section keymaps", function()
     provider = "claude",
   })
 
+  local muted_hl = vim.api.nvim_get_hl(0, { name = "DoraCallAuditMuted", link = true })
+  assert_eq(muted_hl.link, "Comment", "muted explanation text follows the active colorscheme")
+
   local toc_win
   local audit_windows = 0
   for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
     local buf = vim.api.nvim_win_get_buf(win)
     local name = vim.api.nvim_buf_get_name(buf)
-    if name:match("Call Audit") then
+    if name:match("Call Explanation") then
       audit_windows = audit_windows + 1
-      assert_eq(vim.bo[buf].buftype, "nofile", "audit buffers are scratch buffers")
-      assert_eq(vim.bo[buf].buflisted, false, "audit buffers do not enter normal buffer switching")
+      assert_eq(vim.bo[buf].buftype, "nofile", "explanation buffers are scratch buffers")
+      assert_eq(vim.bo[buf].buflisted, false, "explanation buffers do not enter normal buffer switching")
+      assert_eq(vim.bo[buf].filetype, "call_audit", "explanation buffers do not trigger Markdown note plugins")
+      assert_not_match(
+        vim.wo[win].winhighlight,
+        "DoraCallAuditNormal",
+        "explanation windows inherit the active colorscheme background"
+      )
       if vim.fn.exists("+winfixbuf") == 1 then
         assert_eq(vim.wo[win].winfixbuf, true, "audit windows keep their assigned buffers")
       end
@@ -300,7 +348,7 @@ run("opens locked audit windows with numeric section keymaps", function()
     end
   end
 
-  assert_eq(audit_windows, 3, "audit panel opens exactly three managed windows")
+  assert_eq(audit_windows, 3, "explanation panel opens exactly three managed windows")
   assert_eq(toc_win ~= nil, true, "toc window exists")
   vim.api.nvim_set_current_win(toc_win)
   local mapping = vim.fn.maparg("3", "n", false, true)

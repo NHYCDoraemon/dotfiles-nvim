@@ -364,7 +364,7 @@ run("finds Java method declaration after Spring annotation", function()
   assert_eq(graph.find_next_java_method_line(lines, 1), 3)
 end)
 
-run("closes hierarchy graph and audit windows at once", function()
+run("closes hierarchy graph and explanation windows at once", function()
   vim.cmd("enew")
   local base_win = vim.api.nvim_get_current_win()
   local root = graph.new_node(item("execute", "com.demo.ForceClaimService", "/repo/src/ForceClaimService.java", 10), 0)
@@ -387,15 +387,20 @@ run("closes hierarchy graph and audit windows at once", function()
       local buf = vim.api.nvim_win_get_buf(win)
       local ft = vim.bo[buf].filetype
       local name = vim.api.nvim_buf_get_name(buf)
-      if ft == "call_hierarchy" or ft == "call_hierarchy_graph" or ft == "call_audit" or name:match("Call Audit") then
+      if
+        ft == "call_hierarchy"
+        or ft == "call_hierarchy_graph"
+        or ft == "call_audit"
+        or name:match("Call Explanation")
+      then
         count = count + 1
       end
     end
     return count
   end
 
-  assert_eq(managed_window_count() >= 5, true, "test opens hierarchy graph and audit windows")
+  assert_eq(managed_window_count() >= 5, true, "test opens hierarchy graph and explanation windows")
   graph.close_all()
-  assert_eq(managed_window_count(), 0, "close_all closes every managed hierarchy/audit window")
+  assert_eq(managed_window_count(), 0, "close_all closes every managed hierarchy/explanation window")
   assert_eq(vim.api.nvim_win_is_valid(base_win), true, "close_all leaves the original editing window available")
 end)

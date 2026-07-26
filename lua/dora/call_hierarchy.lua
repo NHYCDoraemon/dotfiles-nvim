@@ -193,7 +193,7 @@ function M.render_tree(root, opts)
       opts.direction == "incoming" and "上游" or "下游",
       opts.business_view and "业务优先" or "完整"
     ),
-    "<CR> 跳转  K 文档  r 刷新  G 紧凑图  A Diagram图  E AI审计  P Preview图  y 复制链路  Y 导出DOT",
+    "<CR> 跳转  K 文档  r 刷新  G 紧凑图  A Diagram图  E AI讲解  P Preview图  y 复制链路  Y 导出DOT",
     "",
   }
   local line_map = {}
@@ -662,7 +662,7 @@ function M.to_ascii_graph(root, opts)
       opts.direction == "incoming" and "上游" or "下游",
       opts.business_view and "业务优先" or "完整"
     ),
-    "<CR> 跳转  K 文档  A Diagram图  E AI审计  P Preview图  y 复制ASCII  q/Esc关闭",
+    "<CR> 跳转  K 文档  A Diagram图  E AI讲解  P Preview图  y 复制ASCII  q/Esc关闭",
     "",
   }
   local line_map = {}
@@ -728,7 +728,7 @@ function M.to_ascii_diagram(root, opts)
       opts.direction == "incoming" and "上游" or "下游",
       opts.business_view and "业务优先" or "完整"
     ),
-    "<CR> 跳转  K 文档  G 紧凑图  E AI审计  P Preview图  y 复制Diagram  q/Esc关闭",
+    "<CR> 跳转  K 文档  G 紧凑图  E AI讲解  P Preview图  y 复制Diagram  q/Esc关闭",
     "",
   }
   local line_map = {}
@@ -979,6 +979,7 @@ local function is_managed_buffer(buf)
     or ft == "call_hierarchy_graph"
     or ft == "call_audit"
     or name:match("Call Audit") ~= nil
+    or name:match("Call Explanation") ~= nil
     or name:match("Call Hierarchy") ~= nil
 end
 
@@ -1002,7 +1003,7 @@ function M.close_all()
     end
   end
 
-  vim.notify("Call hierarchy and AI audit panels closed", vim.log.levels.INFO)
+  vim.notify("Call hierarchy and AI explanation panels closed", vim.log.levels.INFO)
 end
 
 local function open_text_buffer(lines, title, line_map)
@@ -1065,15 +1066,15 @@ local function open_text_buffer(lines, title, line_map)
       diagram_lines = lines,
     }))
     if vim.api.nvim_win_is_valid(old_win) then pcall(vim.api.nvim_win_close, old_win, true) end
-  end, "Call graph: AI audit")
+  end, "Call graph: AI explanation")
 
   map("S", function()
     require("dora.call_audit").stop()
-  end, "Call graph: stop AI audit")
+  end, "Call graph: stop AI explanation")
 
   map("C", function()
     require("dora.call_audit").copy_report()
-  end, "Call graph: copy AI audit")
+  end, "Call graph: copy AI explanation")
 
   map("G", function()
     if not M._last_root then return end
@@ -1106,7 +1107,7 @@ local function open_text_buffer(lines, title, line_map)
   map("<S-Right>", "zL", "Call graph: scroll right faster")
   map("q", "<cmd>close<CR>", "Call graph: close")
   map("<Esc>", "<cmd>close<CR>", "Call graph: close")
-  map("Q", M.close_all, "Call graph: close all hierarchy/audit panels")
+  map("Q", M.close_all, "Call graph: close all hierarchy/explanation panels")
   apply_graph_highlights(buf, lines)
   return buf, win
 end
@@ -1301,19 +1302,19 @@ local function set_tree_keymaps(buf)
       graph = M,
       diagram_lines = diagram_lines,
     }))
-  end, "Call hierarchy: AI audit")
+  end, "Call hierarchy: AI explanation")
 
   map("S", function()
     require("dora.call_audit").stop()
-  end, "Call hierarchy: stop AI audit")
+  end, "Call hierarchy: stop AI explanation")
 
   map("C", function()
     require("dora.call_audit").copy_report()
-  end, "Call hierarchy: copy AI audit")
+  end, "Call hierarchy: copy AI explanation")
 
   map("q", "<cmd>close<CR>", "Call hierarchy: close")
   map("<Esc>", "<cmd>close<CR>", "Call hierarchy: close")
-  map("Q", M.close_all, "Call hierarchy: close all hierarchy/audit panels")
+  map("Q", M.close_all, "Call hierarchy: close all hierarchy/explanation panels")
 end
 
 local function apply_highlights(buf, lines, line_map)

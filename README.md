@@ -142,15 +142,17 @@ The script is **idempotent** — safe to re-run. It backs up any existing `~/.co
 | `<Space>chd` | Boxed ASCII diagram from the method under cursor; boxes wrap at about 60% of editor width |
 | `G` in tree | Render the current chain as a compact Neovim ASCII graph with explicit arrows and method summaries |
 | `A` in tree/graph | Render the current chain as a boxed ASCII diagram with role colors and intent/action/input/output details |
-| `E` in tree/graph | Start or refresh the bottom AI call audit panel for the current chain |
-| `S` in tree/graph/audit | Stop the running AI audit stream |
-| `C` in tree/graph/audit | Copy the current AI audit report |
-| `<Space>chx` / `Q` in tree/graph/audit | Close every call hierarchy, ASCII/Diagram, and AI audit panel |
-| `<CR>` in audit evidence | Jump to the referenced source location |
-| `[` / `]` in audit | Move to previous / next evidence item |
+| `E` in tree/graph | Explain the current call chain and verify its correctness from source evidence |
+| `S` in tree/graph/explanation | Stop the running AI explanation stream |
+| `C` in tree/graph/explanation | Copy the current AI call explanation |
+| `<Space>chx` / `Q` in tree/graph/explanation | Close every call hierarchy, ASCII/Diagram, and AI explanation panel |
+| `<CR>` in explanation evidence | Jump to the referenced source location |
+| `[` / `]` in explanation | Move to previous / next evidence item |
 | `P` in tree | Render the current chain as PDF/SVG with Graphviz and open the PDF |
 | `y` in tree | Copy Markdown chain to clipboard; in the ASCII graph, copy the graph text |
 | `Y` in tree | Copy DOT graph to clipboard and write a `/tmp/dora-call-hierarchy-*.dot` file |
+
+The AI explanation is evidence-first: it reads the relevant caller/callee context, reconstructs the actual execution order, and labels correctness as verified, partially verifiable, or unverifiable. It does not perform architecture review, general defect hunting, or unsolicited redesign.
 
 ### Editing power tools
 
