@@ -49,3 +49,18 @@ typeset -U path
 # project helper functions, per-machine PATH tweaks, etc. here.
 # ----------------------------------------------------------------------------
 [ -f "$HOME/.zshrc.local" ] && . "$HOME/.zshrc.local"
+
+# opencode
+export PATH=/Users/raymond/.opencode/bin:$PATH
+
+# >>> dora-managed-path >>>
+typeset -U path
+path=("/Users/raymond/go/bin" $path[@])
+# <<< end dora-managed-path <<<
+
+# kimi-code
+export PATH="/Users/raymond/.kimi-code/bin:$PATH"
+export DOCKER_HOST="unix:///Applications/Finch/lima/data/finch/sock/finch.sock"
+export ALIYUN_KEY="/Users/raymond/Library/CloudStorage/OneDrive-个人/拓洲科技项目资料/阿里云服务器/tozoa.pem"
+
+alias docker=finch
