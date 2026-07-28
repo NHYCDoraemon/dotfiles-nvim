@@ -48,6 +48,14 @@ opt.colorcolumn = "100"      -- thin vertical line at column 100 (line-width hin
 -- and on the satellite scrollbar). Theme controls the colors via
 -- DiagnosticSign* highlight groups.
 vim.diagnostic.config({
+  -- Neovim 0.12.2 can retain diagnostics for an unloaded buffer and then
+  -- render their stale line numbers during BufRead. Its underline handler
+  -- reads those lines with strict indexing, which aborts Neo-tree's open
+  -- operation when the file is now shorter. Let the next post-load
+  -- diagnostic publication render underlines instead.
+  underline = function(_, bufnr)
+    return vim.api.nvim_buf_is_loaded(bufnr)
+  end,
   signs = {
     text = {
       [vim.diagnostic.severity.ERROR] = "✘",
