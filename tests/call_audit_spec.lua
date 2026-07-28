@@ -91,6 +91,7 @@ run("builds evidence-based call explanation context with diagram and snippets", 
   assert_match(context.prompt, "调用链讲解员", "prompt gives the agent a focused explanation role")
   assert_match(context.prompt, "不做架构设计评审", "prompt excludes architecture review")
   assert_match(context.prompt, "不得猜测", "prompt rejects speculative assertions")
+  assert_match(context.prompt, "只输出一次最终讲解", "prompt suppresses verbose progress narration")
   assert_match(context.prompt, "最外层调用者 → 直接调用者 → 当前方法", "prompt explains incoming execution direction")
   assert_match(context.prompt, "Business ASCII Diagram", "prompt includes diagram title")
   assert_match(context.prompt, "RuntimeFormSubmissionService%.submit", "prompt includes node label")
@@ -131,7 +132,13 @@ run("parses Claude and Codex stream text chunks", function()
     '{"type":"item.completed","item":{"id":"item_3","type":"agent_message","text":" report"}}'
   )
   assert_eq(codex_completed.text, " report", "Codex completed agent message is parsed")
-  assert_eq(codex_completed.activity, "正在生成调用讲解", "Codex agent message updates live activity")
+  assert_eq(codex_completed.interim, true, "Codex agent messages are kept out of the final report")
+  assert_eq(codex_completed.activity, "已完成一阶段核验", "Codex agent message updates compact activity")
+
+  local codex_command = audit.parse_codex_event_json(
+    '{"type":"item.completed","item":{"id":"item_4","type":"command_execution"}}'
+  )
+  assert_eq(codex_command.command_done, true, "Codex command completions can update the read counter")
 
   local codex_done = audit.parse_codex_event_json('{"type":"turn.completed","usage":{"output_tokens":12}}')
   assert_eq(codex_done.done, true, "Codex completed turn is parsed")
@@ -173,7 +180,7 @@ run("selects provider commands for Claude and Codex", function()
   assert_not_contains(claude_cmd, "PROMPT", "Claude prompt is sent through stdin to avoid variadic option capture")
   assert_eq(audit.provider_stdin("claude", "PROMPT"), "PROMPT", "Claude prompt is available as stdin")
 
-  local codex_cmd = audit.provider_command("codex", "/repo", "PROMPT")
+  local codex_cmd = audit.provider_command("codex", "/repo", "PROMPT", "/tmp/final-message.md")
   assert_match(codex_cmd[1], "codex$", "Codex command starts with resolved codex executable")
   assert_eq(
     codex_cmd[2],
@@ -186,6 +193,8 @@ run("selects provider commands for Claude and Codex", function()
   assert_contains(codex_cmd, "gpt-5.6-sol", "Codex audit pins GPT-5.6 Sol")
   assert_contains(codex_cmd, 'model_reasoning_effort="ultra"', "Codex audit uses the highest intelligence level")
   assert_contains(codex_cmd, "--json", "Codex command requests json events")
+  assert_contains(codex_cmd, "--output-last-message", "Codex writes only the final answer to a dedicated file")
+  assert_contains(codex_cmd, "/tmp/final-message.md", "Codex receives the dedicated final-answer path")
   assert_eq(audit.provider_stdin("codex", "PROMPT"), nil, "Codex keeps prompt in argv")
 
   local ok, err = audit.provider_command("missing", "/repo", "PROMPT")
@@ -223,6 +232,33 @@ run("uses a roomier default audit layout", function()
   assert_eq(layout.toc_width, 24, "default toc is compact")
   assert_eq(layout.evidence_width, 34, "default evidence column is compact")
   assert_eq(layout.report_width, 142, "default report area gets the primary space")
+end)
+
+run("renders compact background progress without agent narration", function()
+  local lines = audit.progress_report_lines({ evidence = { {}, {}, {} } }, {
+    provider = "codex",
+    activity = "正在读取项目证据",
+    elapsed = "12:34",
+    commands_completed = 17,
+    reasoning_rounds = 3,
+    show_log = false,
+  })
+  local text = table.concat(lines, "\n")
+
+  assert_match(text, "后台核验中", "progress view makes the background state explicit")
+  assert_match(text, "耗时: 12:34", "progress view shows elapsed time")
+  assert_match(text, "工具读取: 17 次", "progress view shows compact evidence activity")
+  assert_match(text, "图中证据: 3 个节点", "progress view shows the known graph scope")
+  assert_match(text, "按 q 收起面板继续工作", "progress view explains background handoff")
+  assert_not_match(text, "我会严格按", "progress view does not expose agent narration")
+
+  local with_log = audit.progress_report_lines({ evidence = {} }, {
+    show_log = true,
+    progress_events = {
+      { elapsed = "00:05", text = "已读取项目证据" },
+    },
+  })
+  assert_match(table.concat(with_log, "\n"), "00:05  已读取项目证据", "process log is opt-in")
 end)
 
 run("renders markdown into a reading view and keeps section positions", function()
@@ -353,6 +389,34 @@ run("opens locked explanation windows with numeric section keymaps", function()
   vim.api.nvim_set_current_win(toc_win)
   local mapping = vim.fn.maparg("3", "n", false, true)
   assert_match(mapping.desc or "", "section 3", "toc supports numeric section navigation")
+
+  local background_mapping = vim.fn.maparg("q", "n", false, true)
+  assert_match(background_mapping.desc or "", "background", "q sends a running explanation to the background")
+  local background_all_mapping = vim.fn.maparg("Q", "n", false, true)
+  assert_match(background_all_mapping.desc or "", "background", "Q also hides all three panes without stopping the task")
+  local log_mapping = vim.fn.maparg("L", "n", false, true)
+  assert_match(log_mapping.desc or "", "process log", "L toggles the optional process log")
+
+  audit.hide()
+  local hidden_windows = 0
+  for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+    local name = vim.api.nvim_buf_get_name(vim.api.nvim_win_get_buf(win))
+    if name:match("Call Explanation") then hidden_windows = hidden_windows + 1 end
+  end
+  assert_eq(hidden_windows, 0, "hiding the explanation closes its windows")
+
+  audit.open(root, {
+    start = false,
+    graph = graph,
+    diagram_lines = { "Business ASCII Diagram", "[入口] ForceClaimController.parseSnapshotId" },
+    provider = "claude",
+  })
+  local reopened_windows = 0
+  for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+    local name = vim.api.nvim_buf_get_name(vim.api.nvim_win_get_buf(win))
+    if name:match("Call Explanation") then reopened_windows = reopened_windows + 1 end
+  end
+  assert_eq(reopened_windows, 3, "E can reopen the existing explanation without rerunning it")
 
   audit.close()
 end)

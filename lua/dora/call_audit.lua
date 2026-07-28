@@ -18,6 +18,11 @@ local sections = {
   { key = "boundaries", label = "上下文边界", hint = "明确未验证内容，不猜测" },
 }
 
+local section_labels = {}
+for _, section in ipairs(sections) do
+  section_labels[section.label] = true
+end
+
 local function merge_opts(opts)
   local merged = vim.tbl_extend("force", M.defaults, opts or {})
   merged.provider = merged.provider or vim.g.call_audit_provider or M.defaults.provider
@@ -159,6 +164,7 @@ local function build_prompt(context)
     "- 在未同时核对调用方、被调用方及相关契约前，不得对该调用交接点给出完整正确的判定。",
     "- 只有直接证据证明调用关系、数据传递或可见契约相互矛盾时，才能判定「不成立」。",
     "- 注意: 调用图经过业务视角过滤（框架代码、getter/setter、测试类被隐藏），不要把「图中未出现」当作「不存在」。",
+    "- 分析期间不要输出计划、技能加载说明或阶段汇报。完成全部核验后，只输出一次最终讲解。",
     "",
     "输出格式必须稳定，使用这些中文小节:",
     "## 调用结论",
@@ -526,24 +532,28 @@ function M.parse_codex_event_json(line)
   end
   if event.type == "item.completed" and type(event.item) == "table" then
     if event.item.type == "agent_message" and event.item.text then
-      return { text = event.item.text, activity = "正在生成调用讲解" }
+      return {
+        text = event.item.text,
+        interim = true,
+        activity = "已完成一阶段核验",
+      }
     end
     if event.item.type == "reasoning" then
-      return { activity = "已完成一轮推理" }
+      return { activity = "已完成一轮推理", reasoning_done = true }
     end
     if event.item.type == "command_execution" then
-      return { activity = "已读取项目证据" }
+      return { activity = "已读取项目证据", command_done = true }
     end
     return nil
   end
   if event.delta then
-    return { text = event.delta }
+    return { text = event.delta, interim = true, delta = true }
   end
   if event.message and type(event.message) == "string" then
-    return { text = event.message }
+    return { text = event.message, interim = true }
   end
   if event.type == "agent_message" and event.text then
-    return { text = event.text }
+    return { text = event.text, interim = true }
   end
   if event.type == "task_complete" or event.type == "turn.completed" then
     return { done = true, activity = "讲解完成" }
@@ -564,7 +574,7 @@ function M.provider_stdin(provider, prompt)
   return nil
 end
 
-function M.provider_command(provider, cwd, prompt)
+function M.provider_command(provider, cwd, prompt, final_output_path)
   provider = provider or M.defaults.provider
   cwd = cwd or vim.fn.getcwd()
 
@@ -587,7 +597,7 @@ function M.provider_command(provider, cwd, prompt)
   end
 
   if provider == "codex" then
-    return {
+    local command = {
       M.resolve_executable("codex") or "codex",
       "--dangerously-bypass-approvals-and-sandbox",
       "exec",
@@ -596,10 +606,12 @@ function M.provider_command(provider, cwd, prompt)
       "-c",
       ('model_reasoning_effort="%s"'):format(M.defaults.codex_reasoning_effort),
       "--json",
-      "-C",
-      cwd,
-      prompt,
     }
+    if final_output_path and final_output_path ~= "" then
+      vim.list_extend(command, { "--output-last-message", final_output_path })
+    end
+    vim.list_extend(command, { "-C", cwd, prompt })
+    return command
   end
 
   return nil, "Unsupported provider: " .. tostring(provider)
@@ -611,6 +623,12 @@ local state = {
   status = "idle",
   provider = M.defaults.provider,
   evidence_index = 1,
+  activity = "等待开始",
+  commands_completed = 0,
+  reasoning_rounds = 0,
+  pending_message = "",
+  progress_events = {},
+  show_log = false,
 }
 
 local ns = vim.api.nvim_create_namespace("dora-call-audit")
@@ -666,23 +684,105 @@ local function apply_report_highlights(buf, lines)
   for lnum, line in ipairs(lines) do
     if lnum == 1 or line:match("^#") then
       vim.api.nvim_buf_add_highlight(buf, ns, "DoraCallAuditTitle", lnum - 1, 0, -1)
-    elseif line:match("^##") then
+    elseif line == "后台核验中" or line == "过程日志" or section_labels[line] then
       vim.api.nvim_buf_add_highlight(buf, ns, "DoraCallAuditSection", lnum - 1, 0, -1)
     elseif line:match("不成立") or line:match("无法验证") then
       vim.api.nvim_buf_add_highlight(buf, ns, "DoraCallAuditRisk", lnum - 1, 0, -1)
+    elseif line:match("后台核验") or line:match("^当前阶段:") then
+      vim.api.nvim_buf_add_highlight(buf, ns, "DoraCallAuditStreaming", lnum - 1, 0, -1)
+    elseif line:match("^[>%s]%s*%[%d+%]") then
+      vim.api.nvim_buf_add_highlight(buf, ns, "DoraCallAuditEvidence", lnum - 1, 0, -1)
     elseif line:match("^状态:") or line:match("^>") then
       vim.api.nvim_buf_add_highlight(buf, ns, "DoraCallAuditMuted", lnum - 1, 0, -1)
     end
   end
 end
 
+local clock = vim.uv or vim.loop
+
+function M.format_duration(seconds)
+  seconds = math.max(0, math.floor(tonumber(seconds) or 0))
+  local hours = math.floor(seconds / 3600)
+  local minutes = math.floor((seconds % 3600) / 60)
+  local remainder = seconds % 60
+  if hours > 0 then return ("%d:%02d:%02d"):format(hours, minutes, remainder) end
+  return ("%02d:%02d"):format(minutes, remainder)
+end
+
+local function elapsed_seconds()
+  if not state.started_at_ns then return 0 end
+  local finish = state.finished_at_ns or clock.hrtime()
+  return math.max(0, (finish - state.started_at_ns) / 1000000000)
+end
+
+local function elapsed_text()
+  return M.format_duration(elapsed_seconds())
+end
+
+local status_labels = {
+  idle = "等待",
+  preparing = "准备中",
+  streaming = "后台核验中",
+  complete = "已完成",
+  failed = "失败",
+  stopped = "已停止",
+}
+
+local function status_text(status)
+  return status_labels[status or "idle"] or tostring(status or "idle")
+end
+
+function M.progress_report_lines(context, progress)
+  progress = vim.tbl_extend("force", {
+    provider = M.defaults.provider,
+    activity = "正在准备调用链上下文",
+    elapsed = "00:00",
+    commands_completed = 0,
+    reasoning_rounds = 0,
+    progress_events = {},
+    show_log = false,
+  }, progress or {})
+
+  local evidence_count = #(context and context.evidence or {})
+  local lines = {
+    "# AI 调用讲解",
+    "",
+    ("状态: 后台核验中  Provider: %s  耗时: %s"):format(progress.provider, progress.elapsed),
+    "",
+    "## 后台核验中",
+    "正在还原真实入口路径，并核对调用方、被调用方及相关契约。",
+    "",
+    "当前阶段: " .. progress.activity,
+    ("工具读取: %d 次  推理阶段: %d  图中证据: %d 个节点"):format(
+      progress.commands_completed,
+      progress.reasoning_rounds,
+      evidence_count
+    ),
+    "",
+    "按 q 收起面板继续工作；任务会在后台运行，完成后主动通知。",
+    "按 E 可随时回来查看，L 显示过程日志，S 停止任务。",
+  }
+
+  if progress.show_log then
+    table.insert(lines, "")
+    table.insert(lines, "## 过程日志")
+    if #progress.progress_events == 0 then
+      table.insert(lines, "尚无新的阶段事件。")
+    else
+      for _, entry in ipairs(progress.progress_events) do
+        table.insert(lines, ("- %s  %s"):format(entry.elapsed or "00:00", entry.text or ""))
+      end
+    end
+  end
+  return lines
+end
+
 local function render_toc_lines()
   local lines = {
-    "AI Call Explanation",
-    (state.context and state.context.title) or "Call Hierarchy",
-    ("状态: %s"):format(state.status or "idle"),
-    ("Provider: %s"):format(state.provider or M.defaults.provider),
-    ("进度: %s"):format(state.activity or "等待开始"),
+    "AI 调用讲解",
+    ("状态 %s"):format(status_text(state.status)),
+    ("耗时 %s"):format(elapsed_text()),
+    ("读取 %d 次"):format(state.commands_completed or 0),
     "",
     "讲解目录",
     "",
@@ -693,11 +793,13 @@ local function render_toc_lines()
   end
   table.insert(lines, "")
   table.insert(lines, "操作")
-  table.insert(lines, "1-5 跳转讲解")
-  table.insert(lines, "E 重新讲解")
-  table.insert(lines, "S 停止流式")
-  table.insert(lines, "C 复制讲解")
-  table.insert(lines, "q 关闭面板")
+  table.insert(lines, "1-5 跳转")
+  table.insert(lines, "q 转入后台")
+  table.insert(lines, "L 过程日志")
+  table.insert(lines, "E 重新核验")
+  table.insert(lines, "S 停止任务")
+  table.insert(lines, "C 复制结果")
+  table.insert(lines, "Q 收起三窗")
   return lines
 end
 
@@ -705,12 +807,25 @@ local function render_report_lines()
   local lines
   if state.report_text and state.report_text ~= "" then
     lines = vim.split(state.report_text, "\n", { plain = true })
-    table.insert(lines, 1, ("进度: %s"):format(state.activity or "等待开始"))
-    table.insert(lines, 1, ("状态: %s  Provider: %s"):format(state.status or "idle", state.provider or M.defaults.provider))
+    table.insert(lines, 1, ("耗时: %s"):format(elapsed_text()))
+    table.insert(lines, 1, ("状态: %s  Provider: %s"):format(
+      status_text(state.status),
+      state.provider or M.defaults.provider
+    ))
     table.insert(lines, 1, "# AI 调用讲解")
+  elseif state.status == "preparing" or state.status == "streaming" then
+    lines = M.progress_report_lines(state.context, {
+      provider = state.provider,
+      activity = state.activity,
+      elapsed = elapsed_text(),
+      commands_completed = state.commands_completed,
+      reasoning_rounds = state.reasoning_rounds,
+      progress_events = state.progress_events,
+      show_log = state.show_log,
+    })
   else
     lines = M.initial_report_lines({ status = state.status, provider = state.provider })
-    table.insert(lines, 3, ("进度: %s"):format(state.activity or "等待开始"))
+    table.insert(lines, 3, ("耗时: %s"):format(elapsed_text()))
   end
   local table_width = state.layout and state.layout.report_width or nil
   if state.wins and state.wins.report and vim.api.nvim_win_is_valid(state.wins.report) then
@@ -758,6 +873,35 @@ local function refresh_panel()
   apply_report_highlights(state.bufs.toc, toc)
   apply_report_highlights(state.bufs.report, report)
   apply_report_highlights(state.bufs.evidence, evidence)
+end
+
+local function add_progress(text)
+  if not text or text == "" then return end
+  local events = state.progress_events or {}
+  local last = events[#events]
+  if last and last.text == text then return end
+  table.insert(events, { elapsed = elapsed_text(), text = text })
+  while #events > 8 do
+    table.remove(events, 1)
+  end
+  state.progress_events = events
+end
+
+local function stop_elapsed_timer()
+  if not state.elapsed_timer then return end
+  pcall(vim.fn.timer_stop, state.elapsed_timer)
+  state.elapsed_timer = nil
+end
+
+local function start_elapsed_timer()
+  stop_elapsed_timer()
+  state.elapsed_timer = vim.fn.timer_start(5000, function()
+    if state.status ~= "streaming" then
+      stop_elapsed_timer()
+      return
+    end
+    if state.bufs then refresh_panel() end
+  end, { ["repeat"] = -1 })
 end
 
 local function jump_to_evidence(evidence)
@@ -809,8 +953,16 @@ local function set_panel_keymaps(buf)
   end
 
   map("E", function()
-    if state.context then M.open(state.context.root, state.context.opts) end
-  end, "Call explanation: refresh")
+    if not state.context then return end
+    M.open(state.context.root, vim.tbl_extend("force", state.context.opts or {}, {
+      force_refresh = true,
+    }))
+  end, "Call explanation: restart verification")
+
+  map("L", function()
+    state.show_log = not state.show_log
+    refresh_panel()
+  end, "Call explanation: toggle process log")
 
   map("S", function()
     M.stop()
@@ -833,22 +985,17 @@ local function set_panel_keymaps(buf)
   end, "Call explanation: previous evidence")
 
   map("q", function()
-    M.close()
-  end, "Call explanation: close")
+    M.hide()
+  end, "Call explanation: continue in background")
 
   map("Q", function()
-    local ok, graph = pcall(require, "dora.call_hierarchy")
-    if ok and graph and graph.close_all then
-      graph.close_all()
-    else
-      M.close()
-    end
-  end, "Call explanation: close all hierarchy/explanation panels")
+    M.hide()
+  end, "Call explanation: hide all panes and continue in background")
 
   local function locked()
-    vim.notify("AI call explanation panel is locked; close it with q before switching buffers.", vim.log.levels.INFO)
+    vim.notify("讲解面板已锁定；按 q 收起后可继续编辑，任务会留在后台。", vim.log.levels.INFO)
   end
-  for _, lhs in ipairs({ "]b", "[b", "<S-l>", "<S-h>", "<leader>bn", "<leader>bp" }) do
+  for _, lhs in ipairs({ "]b", "[b", "<S-h>", "<leader>bn", "<leader>bp" }) do
     map(lhs, locked, "Call explanation: locked buffer")
   end
 end
@@ -903,12 +1050,33 @@ local function focus_normal_window()
   return current
 end
 
-local function open_panel()
-  if state.wins then
-    for _, win in pairs(state.wins) do
-      if vim.api.nvim_win_is_valid(win) then pcall(vim.api.nvim_win_close, win, true) end
+local function panel_is_visible()
+  return state.wins
+    and state.wins.report
+    and vim.api.nvim_win_is_valid(state.wins.report)
+end
+
+local function close_panel_windows()
+  local managed = state.wins or {}
+  local current = vim.api.nvim_get_current_win()
+  local close_current = false
+  state.wins = nil
+  state.bufs = nil
+
+  for _, win in pairs(managed) do
+    if win == current then
+      close_current = true
+    elseif vim.api.nvim_win_is_valid(win) then
+      pcall(vim.api.nvim_win_close, win, true)
     end
   end
+  if close_current and vim.api.nvim_win_is_valid(current) then
+    pcall(vim.api.nvim_win_close, current, true)
+  end
+end
+
+local function open_panel()
+  close_panel_windows()
 
   local original_win = focus_normal_window()
   local layout = M.panel_layout(vim.o.columns, vim.o.lines, state.opts)
@@ -986,13 +1154,34 @@ local function append_text(text)
   refresh_panel()
 end
 
+local function cleanup_final_output()
+  local path = state.final_output_path
+  if path and path ~= "" then pcall(vim.fn.delete, path) end
+  state.final_output_path = nil
+end
+
+local function read_final_output()
+  local path = state.final_output_path
+  if not path or path == "" or vim.fn.filereadable(path) ~= 1 then return "" end
+  local ok, lines = pcall(vim.fn.readfile, path)
+  if not ok or not lines then return "" end
+  return trim(table.concat(lines, "\n"))
+end
+
 local function start_job()
   local provider = state.provider or M.defaults.provider
-  local command, err = M.provider_command(provider, state.cwd, state.context.prompt)
+  local run_id = state.run_id
+  cleanup_final_output()
+  if provider == "codex" then
+    state.final_output_path = vim.fn.tempname() .. "-call-explanation.md"
+  end
+
+  local command, err = M.provider_command(provider, state.cwd, state.context.prompt, state.final_output_path)
   local stdin = M.provider_stdin(provider, state.context.prompt)
   if not command then
     state.status = "failed"
     state.report_text = "## 启动失败\n\n" .. err
+    cleanup_final_output()
     refresh_panel()
     return
   end
@@ -1000,14 +1189,24 @@ local function start_job()
   if vim.fn.executable(command[1]) ~= 1 then
     state.status = "failed"
     state.report_text = ("## 启动失败\n\nProvider executable not found: `%s`\n\n已检查 PATH、~/.local/bin、~/bin、/opt/homebrew/bin、/usr/local/bin。"):format(command[1])
+    cleanup_final_output()
     refresh_panel()
     return
   end
 
   state.status = "streaming"
   state.report_text = ""
+  state.pending_message = ""
+  state.provider_error = ""
+  state.commands_completed = 0
+  state.reasoning_rounds = 0
+  state.progress_events = {}
+  state.started_at_ns = clock.hrtime()
+  state.finished_at_ns = nil
   state.activity = "正在启动 GPT-5.6 Sol · Ultra · Bypass"
+  add_progress(state.activity)
   refresh_panel()
+  start_elapsed_timer()
 
   local job_opts = {
     cwd = state.cwd,
@@ -1018,44 +1217,99 @@ local function start_job()
     },
     on_stdout = function(_, data)
       vim.schedule(function()
+        if run_id ~= state.run_id then return end
+        local should_refresh = false
         for _, line in ipairs(data or {}) do
           if line ~= "" then
             local event = parse_provider_line(line)
-            if event and event.activity then
+            if event and event.done and provider == "codex" then
+              state.activity = "正在整理最终讲解"
+              add_progress(state.activity)
+              should_refresh = true
+            elseif event and event.activity then
               state.activity = event.activity
+              add_progress(event.activity)
+              should_refresh = true
             end
             if event and event.text then
-              append_text(event.text)
-            elseif event and event.activity then
-              refresh_panel()
+              if provider == "codex" then
+                if event.delta then
+                  state.pending_message = (state.pending_message or "") .. event.text
+                else
+                  state.pending_message = event.text
+                end
+                should_refresh = true
+              else
+                append_text(event.text)
+              end
+            end
+            if event and event.command_done then
+              state.commands_completed = (state.commands_completed or 0) + 1
+              should_refresh = true
+            end
+            if event and event.reasoning_done then
+              state.reasoning_rounds = (state.reasoning_rounds or 0) + 1
+              should_refresh = true
             end
           end
         end
+        if should_refresh and provider == "codex" then refresh_panel() end
       end)
     end,
     on_stderr = function(_, data)
       vim.schedule(function()
+        if run_id ~= state.run_id then return end
         local text = M.provider_stderr_text(provider, data)
-        if text ~= "" and state.report_text == "" then
-          state.report_text = "## Provider 输出\n\n" .. text
+        if text ~= "" then
+          local errors = vim.tbl_filter(function(value)
+            return value ~= ""
+          end, { state.provider_error or "", text })
+          state.provider_error = trim(table.concat(errors, "\n"))
+          state.activity = "Provider 返回了诊断信息"
+          add_progress(state.activity)
           refresh_panel()
         end
       end)
     end,
     on_exit = function(_, code)
       vim.schedule(function()
+        if run_id ~= state.run_id then return end
         if state.status == "stopped" then
+          stop_elapsed_timer()
+          cleanup_final_output()
           refresh_panel()
           return
         end
+
+        local final_output = read_final_output()
+        cleanup_final_output()
         state.job = nil
+        state.finished_at_ns = clock.hrtime()
+        stop_elapsed_timer()
         state.status = code == 0 and "complete" or "failed"
         state.activity = code == 0 and "讲解完成" or "讲解失败"
-        if state.report_text == "" then
-          state.report_text = code == 0 and "## 完成\n\nProvider 没有返回可用文本。"
-            or ("## Provider 失败\n\n退出码: " .. tostring(code))
+        add_progress(state.activity)
+
+        if code == 0 then
+          if final_output ~= "" then
+            state.report_text = final_output
+          elseif state.report_text == "" and state.pending_message ~= "" then
+            state.report_text = state.pending_message
+          elseif state.report_text == "" then
+            state.report_text = "## 完成\n\nProvider 没有返回可用的最终讲解。"
+          end
+        else
+          state.report_text = "## Provider 失败\n\n退出码: " .. tostring(code)
+          if state.provider_error and state.provider_error ~= "" then
+            state.report_text = state.report_text .. "\n\n" .. state.provider_error
+          end
         end
+
+        local hidden = not panel_is_visible()
         refresh_panel()
+        local message = code == 0 and "AI 调用讲解已完成" or "AI 调用讲解失败"
+        if hidden then message = message .. "；回到调用图按 E 查看" end
+        vim.notify(message, code == 0 and vim.log.levels.INFO or vim.log.levels.ERROR)
       end)
     end,
     stdin = stdin and "pipe" or "null",
@@ -1067,6 +1321,9 @@ local function start_job()
     state.status = "failed"
     state.report_text = "## 启动失败\n\n无法启动 provider job。"
     state.job = nil
+    state.finished_at_ns = clock.hrtime()
+    stop_elapsed_timer()
+    cleanup_final_output()
     refresh_panel()
     return
   end
@@ -1089,13 +1346,36 @@ end
 
 function M.open(root, opts)
   opts = merge_opts(opts)
+  local force_refresh = opts.force_refresh == true
+  opts.force_refresh = nil
   local graph = opts.graph or require("dora.call_hierarchy")
   if not root then
     vim.notify("No call hierarchy graph available for explanation", vim.log.levels.WARN)
     return
   end
 
+  local same_context = state.context and state.context.root == root
+  local reusable = same_context
+    and not force_refresh
+    and (
+      state.job ~= nil
+      or state.status == "preparing"
+      or state.status == "complete"
+      or state.status == "failed"
+    )
+  if reusable then
+    state.opts = opts
+    if panel_is_visible() then
+      refresh_panel()
+      vim.api.nvim_set_current_win(state.wins.report)
+    else
+      open_panel()
+    end
+    return
+  end
+
   if state.job then M.stop() end
+  state.run_id = (state.run_id or 0) + 1
   local diagram_lines = opts.diagram_lines
   if not diagram_lines and graph.to_ascii_diagram then
     diagram_lines = graph.to_ascii_diagram(root, opts)
@@ -1107,6 +1387,13 @@ function M.open(root, opts)
   state.status = "preparing"
   state.report_text = ""
   state.activity = "正在准备调用链上下文"
+  state.commands_completed = 0
+  state.reasoning_rounds = 0
+  state.pending_message = ""
+  state.progress_events = {}
+  state.show_log = false
+  state.started_at_ns = nil
+  state.finished_at_ns = nil
   state.evidence_index = 1
   state.active_section = 1
   state.context = M.build_context(root, vim.tbl_extend("force", opts, {
@@ -1119,32 +1406,44 @@ function M.open(root, opts)
 end
 
 function M.stop()
+  state.run_id = (state.run_id or 0) + 1
   if state.job then
     pcall(vim.fn.jobstop, state.job)
     state.job = nil
   end
+  stop_elapsed_timer()
+  cleanup_final_output()
+  if state.started_at_ns and not state.finished_at_ns then state.finished_at_ns = clock.hrtime() end
   state.status = "stopped"
+  state.activity = "任务已停止"
+  add_progress(state.activity)
   refresh_panel()
 end
 
 function M.copy_report()
   local text = state.report_text
   if not text or text == "" then
-    text = table.concat(render_report_lines(), "\n")
+    vim.notify("调用讲解尚未完成；可以按 q 转入后台，完成后再复制。", vim.log.levels.INFO)
+    return
   end
   vim.fn.setreg("+", text)
   vim.notify("Call explanation copied to clipboard", vim.log.levels.INFO)
 end
 
+function M.hide()
+  local running = state.job ~= nil
+  close_panel_windows()
+  vim.notify(
+    running and "调用讲解已转入后台；完成后会通知。" or "调用讲解面板已收起；按 E 可再次查看。",
+    vim.log.levels.INFO
+  )
+end
+
 function M.close()
   if state.job then M.stop() end
-  if state.wins then
-    for _, win in pairs(state.wins) do
-      if vim.api.nvim_win_is_valid(win) then pcall(vim.api.nvim_win_close, win, true) end
-    end
-  end
-  state.wins = nil
-  state.bufs = nil
+  close_panel_windows()
+  cleanup_final_output()
+  state.context = nil
 end
 
 function M.render_panel_lines(context, state)
@@ -1173,6 +1472,19 @@ function M.render_panel_lines(context, state)
   table.insert(lines, "AI 调用讲解")
   if state.report and #state.report > 0 then
     vim.list_extend(lines, M.render_markdown_view(state.report))
+  elseif state.status == "preparing" or state.status == "streaming" then
+    local progress = M.progress_report_lines(context, {
+      provider = state.provider,
+      activity = state.activity,
+      elapsed = state.elapsed or "00:00",
+      commands_completed = state.commands_completed or 0,
+      reasoning_rounds = state.reasoning_rounds or 0,
+      progress_events = state.progress_events or {},
+      show_log = state.show_log,
+    })
+    table.remove(progress, 1)
+    if progress[1] == "" then table.remove(progress, 1) end
+    vim.list_extend(lines, M.render_markdown_view(progress))
   else
     vim.list_extend(lines, M.render_markdown_view({
       "## 调用结论",
@@ -1200,7 +1512,7 @@ function M.render_panel_lines(context, state)
     table.insert(maps.evidence_lines, { line = #lines, evidence = evidence })
   end
   table.insert(lines, "")
-  table.insert(lines, "E 刷新讲解  S 停止  C 复制讲解  <CR> 跳转证据  [/] 切换证据")
+  table.insert(lines, "q/Q 后台收起  L 日志  E 重跑  S 停止  C 复制  <CR> 跳转证据  [/] 切换证据")
 
   return lines, maps
 end
